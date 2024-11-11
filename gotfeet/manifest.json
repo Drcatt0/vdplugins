@@ -1,14 +1,1 @@
-{
-    "name": "GotFeet",
-    "description": "Fetches a random post from r/feet.",
-    "authors": [
-        {
-            "name": "spin",
-            "id": "624681056225984524"
-        }
-    ],
-    "main": "src/index.ts",
-    "vendetta": {
-        "icon": "ic_badge_staff"
-    }
-}
+{"name":"GotFeet","description":"Fetches a random post from r/feet.","authors":[{"name":"drcatto","id":"624681056225984524"}],"main":"src/index.ts","vendetta":{"icon":"ic_badge_staff"}}
