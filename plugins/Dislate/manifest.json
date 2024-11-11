@@ -1,18 +1,14 @@
 {
-    "name": "Dislate Lite",
-    "description": "Translates text into a desired language.",
+    "name": "GotFeet",
+    "description": "Fetches a random post from r/feet.",
     "authors": [
         {
-            "name": "Acquite <3",
-            "id": "581573474296791211"
-        },
-        {
-            "name": "sapphire :>",
-            "id": "757982547861962752"
+            "name": "drcatto",
+            "id": "624681056225984524"
         }
     ],
     "main": "src/index.ts",
     "vendetta": {
-        "icon": "ic_locale_24px"
+        "icon": "ic_badge_staff"
     }
 }
