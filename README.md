@@ -1,5 +1,4 @@
-# Discontinued 
-According to [Vendetta EOL](https://maisy.moe/), this project has been discontinued too. Thanks for using my plugins! 🙂
+
 
 ---
 
