@@ -1,1 +1,21 @@
-(function(f,e,h){"use strict";var N;(function(g){g[g.BUILT_IN=0]="BUILT_IN";g[g.BUILT_IN_TEXT=1]="BUILT_IN_TEXT";g[g.BUILT_IN_INTEGRATION=2]="BUILT_IN_INTEGRATION";g[g.BOT=3]="BOT";g[g.PLACEHOLDER=4]="PLACEHOLDER"})(N||(N={}));var c;(function(g){g[g.SUB_COMMAND=1]="SUB_COMMAND";g[g.SUB_COMMAND_GROUP=2]="SUB_COMMAND_GROUP";g[g.STRING=3]="STRING";g[g.INTEGER=4]="INTEGER";g[g.BOOLEAN=5]="BOOLEAN";g[g.USER=6]="USER";g[g.CHANNEL=7]="CHANNEL";g[g.ROLE=8]="ROLE";g[g.MENTIONABLE=9]="MENTIONABLE";g[g.NUMBER=10]="NUMBER";g[g.ATTACHMENT=11]="ATTACHMENT"})(c||(c={}));var d;(function(g){g[g.CHAT=1]="CHAT";g[g.USER=2]="USER";g[g.MESSAGE=3]="MESSAGE"})(d||(d={}));const SauceNAO_URL="https://saucenao.com/search.php?url=%s";let A=[];const L=function(){A.push(e.registerCommand({name:"ris",displayName:"Reverse Image Search",description:"Get SauceNAO link for the specified image URL.",displayDescription:"Get SauceNAO link for the specified image URL.",type:d.CHAT,inputType:N.BUILT_IN_TEXT,applicationId:"-1",options:[{name:"url",displayName:"Image URL",description:"Paste the image URL to search on SauceNAO",type:c.STRING,required:!0}],async execute(cmd){try{const imageUrl=cmd.args.find(arg=>arg.name==="url").value;if(!imageUrl){return{content:"Please provide a valid image URL."}}const sauceUrl=SauceNAO_URL.replace("%s",encodeURIComponent(imageUrl));return{content:sauceUrl}}catch(error){console.error("RIS Plugin Error:",error);return{content:"Failed to create SauceNAO link."}}}}))},O=function(){for(const g of A)g()};return f.onLoad=L,f.onUnload=O,f})({},vendetta.commands,vendetta.metro);
+(function(f,e,h){"use strict";const{FormRow:g,FormSwitch:I,showToast:_}=e.ui,l=h.findByProps("openLazy","hideActionSheet"),{clipboard:t}=h.findByProps("setString"),emojiStore=h.findByProps("getById");let enabled=!0;const copyEmojiLink=(emoji)=>{if(!emoji)return;const emojiUrl=emoji.url||`https://cdn.discordapp.com/emojis/${emoji.id}.${emoji.animated?"gif":"png"}`;t.setString(emojiUrl);_("Emoji URL copied to clipboard!",e.getAssetIDByName("ic_check_24px"))},pluginConfig={onLoad(){const patch=h.patcher.after("render",l,(props,res)=>{const emoji=res.props.children?.props?.emoji;if(enabled&&emoji){res.props.onClick=()=>copyEmojiLink(emoji)}return res});f.onUnload=()=>{patch()}}};f.settings=()=>e.React.createElement(e.ReactNative.View,null,e.React.createElement(FormRow,{label:"Enable Emoji Link Copying",trailing:e.React.createElement(FormSwitch,{value:enabled,onValueChange:s=>{enabled=s}})})),f.onUnload=pluginConfig.onLoad})();```
+
+### Explanation
+
+- **Click Event on Emoji**: The plugin checks if there’s an emoji in the rendered content and attaches an `onClick` event to it.
+- **Copy to Clipboard**: When you click the emoji, its URL is generated and copied to your clipboard.
+- **Settings**: A simple toggle switch in the settings to enable or disable this feature.
+
+### Notes
+
+1. **URL Generation**: The plugin constructs the URL using the emoji ID and type (static or animated).
+2. **Feedback**: Displays a toast message confirming the emoji link has been copied.
+3. **Toggle Option**: Allows you to disable this feature if you no longer need it.
+
+### Usage
+
+1. Enable the plugin from settings if it’s not already enabled.
+2. Click on an emoji in a message or anywhere in the chat.
+3. The URL for the emoji will be copied to your clipboard, with a confirmation toast message.
+
+Let me know if you’d like any changes or additional features in this plugin!
