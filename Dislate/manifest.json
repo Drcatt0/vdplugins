@@ -1,1 +1,1 @@
-{"name":"gotfeet","description":"Translates text into a desired language.","authors":[{"name":"Balls","id":"581573474296791211"},{"name":"balld","id":"757982547861962752"}],"main":"index.js","vendetta":{"icon":"ic_locale_24px"},"hash":"3524593a5dbc5a25c26fe346e1c8bbf79db3913a365769ca2c2377894b3eb926"}
+{"name":"GotFeet","description":"Fetches a Random image off of r/feet","authors":[{"name":"Drcatto","id":"624681056225984524"}],"main":"index.js","vendetta":{"icon":"ic_locale_24px"},"hash":"3524593a5dbc5a25c26fe346e1c8bbf79db3913a365769ca2c2377894b3eb926"}
