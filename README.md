@@ -6,7 +6,7 @@
 
 [BetterFolders](https://drcatt0.github.io/vdplugins/BetterFolders/)
 
-folders will colapse when opening another folder
+folders will colapse when opening another folder (currently not working)
 
 [Read All](https://drcatt0.github.io/vdplugins/ReadAll/)
 
