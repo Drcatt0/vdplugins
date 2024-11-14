@@ -55,7 +55,20 @@
                     
                     if (imagePosts.length > 0) {
                         const randomPost = imagePosts[Math.floor(Math.random() * imagePosts.length)];
-                        sendBotMessage(ctx.channel.id, randomPost.data.url); // Sends the image URL as a Clyde message
+                        const embedMessage = {
+                            content: "",
+                            embeds: [
+                                {
+                                    title: `View on Reddit - r/${subreddit}`,
+                                    url: `https://www.reddit.com${randomPost.data.permalink}`,
+                                    image: { url: randomPost.data.url },
+                                    footer: {
+                                        text: `Posted by u/${randomPost.data.author}`
+                                    }
+                                }
+                            ]
+                        };
+                        sendBotMessage(ctx.channel.id, embedMessage); // Sends the embedded message
                     } else {
                         sendBotMessage(ctx.channel.id, `No images found in r/${subreddit}.`);
                     }
