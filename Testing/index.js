@@ -20,6 +20,7 @@ function SearchEngineSettingsPage() {
         searchEngineChoices
             .filter(choice => choice.name.toLowerCase().includes(searchTerm.toLowerCase()))
             .map(choice => t.React.createElement(d.Forms.FormRow, {
+                key: choice.name, // Add a unique key to each row
                 label: choice.name,
                 trailing: () => t.React.createElement(d.Forms.FormRow.Arrow, null),
                 onPress: () => {
