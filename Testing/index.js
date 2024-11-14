@@ -1,6 +1,14 @@
 (function(f, L, g, t, B, C, c, d, F, D, G, k, O, E) {
     "use strict";
-    const H = "https://saucenao.com";
+    const defaultSearchEngines = {
+        SauceNAO: "https://saucenao.com",
+        Google: "https://images.google.com",
+        TinEye: "https://tineye.com"
+    };
+
+    // Variable to store the currently selected search engine URL, defaults to SauceNAO
+    let selectedSearchEngineURL = defaultSearchEngines.SauceNAO;
+
     var w = {
         translate: async function(e) {
             let a = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : "auto",
@@ -8,7 +16,7 @@
                 s = arguments.length > 3 && arguments[3] !== void 0 ? arguments[3] : !1;
             try {
                 if (s) return { source_lang: a, text: e };
-                const n = await (await fetch(H, {
+                const n = await (await fetch(selectedSearchEngineURL, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ text: e, source_lang: a, target_lang: i })
@@ -51,10 +59,10 @@
                           icon = c.getAssetIDByName("ic_search"),
                           oe = function() {
                               if (imageAttachments.length === 1) {
-                                  const saucenaoUrl = `https://saucenao.com/search.php?url=${encodeURIComponent(imageAttachments[0].url)}`;
-                                  t.url.openURL(saucenaoUrl);
+                                  const searchUrl = `${selectedSearchEngineURL}/search.php?url=${encodeURIComponent(imageAttachments[0].url)}`;
+                                  t.url.openURL(searchUrl);
                               } else {
-                                  const links = imageAttachments.map((att, index) => `> [Image ${index + 1}](https://saucenao.com/search.php?url=${encodeURIComponent(att.url)})`).join("\n");
+                                  const links = imageAttachments.map((att, index) => `> [Image ${index + 1}](${selectedSearchEngineURL}/search.php?url=${encodeURIComponent(att.url)})`).join("\n");
                                   t.FluxDispatcher.dispatch({
                                       type: "MESSAGE_UPDATE",
                                       message: { ...u, content: links, guild_id: V.getChannel(u.channel_id).guild_id },
@@ -76,7 +84,7 @@
         });
     }
 
-    // Search Engine Settings Page (no functionality yet)
+    // Search Engine Settings Page
     function SearchEngineSettingsPage() {
         const ScrollView = t.ReactNative.ScrollView ?? t.ReactNative.View;
         const FormRow = d.Forms?.FormRow ?? t.ReactNative.Text;
@@ -89,12 +97,16 @@
                 placeholder: "Search Engine",
                 onChangeText: setSearchTerm,
             }),
-            ["SauceNAO", "Google", "TinEye"].filter(engine => engine.toLowerCase().includes(searchTerm.toLowerCase()))
-                .map(engine => t.React.createElement(FormRow, {
-                    key: engine,
-                    label: engine,
+            Object.entries(defaultSearchEngines)
+                .filter(([name]) => name.toLowerCase().includes(searchTerm.toLowerCase()))
+                .map(([name, url]) => t.React.createElement(FormRow, {
+                    key: name,
+                    label: name,
                     trailing: () => t.React.createElement(FormRow.Arrow ?? t.ReactNative.Text, null, "➔"),
-                    onPress: () => { /* No functionality */ },
+                    onPress: () => {
+                        selectedSearchEngineURL = url;
+                        alert(`Selected ${name} as the search engine.`);
+                    },
                 }))
         );
     }
