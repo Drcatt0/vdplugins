@@ -13,9 +13,9 @@
 
     // Search Engine Settings Page
     function SearchEngineSettingsPage() {
-        const ScrollView = t.ReactNative.ScrollView ?? t.ReactNative.View; // Use View as fallback if ScrollView is undefined
-        const FormRow = d.Forms?.FormRow ?? t.ReactNative.Text; // Use Text as fallback if FormRow is undefined
-        const Search = d.Forms?.Search ?? t.ReactNative.Text; // Use Text as fallback if Search is undefined
+        const ScrollView = t.ReactNative.ScrollView ?? t.ReactNative.View;
+        const FormRow = d.Forms?.FormRow ?? t.ReactNative.Text;
+        const Search = d.Forms?.Search ?? t.ReactNative.Text;
 
         const [searchTerm, setSearchTerm] = t.React.useState("");
 
@@ -31,8 +31,8 @@
                     label: choice.name || "Fallback Label",
                     trailing: () => t.React.createElement(FormRow.Arrow ?? t.ReactNative.Text, null, "➔"),
                     onPress: () => {
-                        O.set("selectedEngine", choice.url);
-                        E.showToast(`Selected ${choice.name} as search engine`, c.getAssetIDByName("check"));
+                        // Simplified onPress action to avoid using Vendetta's storage or toast methods
+                        alert(`Selected ${choice.name} with URL: ${choice.url}`);
                     },
                 }))
         );
