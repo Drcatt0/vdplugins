@@ -6,11 +6,11 @@ const engineChoices = Object.entries(searchEngines).map(function(e){let[a,i]=e;r
 function EngineSettingsPage() {
     const [searchTerm, setSearchTerm] = t.React.useState("");
     return t.React.createElement(t.ReactNative.ScrollView, {style: {flex: 1}},
-        t.React.createElement(d.Forms.Search || "div", {placeholder: "Search Engine", onChangeText: setSearchTerm}),
+        t.React.createElement(d.Forms.Search, {placeholder: "Search Engine", onChangeText: setSearchTerm}),
         engineChoices.filter(choice => choice.displayName.toLowerCase().includes(searchTerm.toLowerCase()))
-            .map(choice => t.React.createElement(d.Forms.FormRow || "div", {
+            .map(choice => t.React.createElement(d.Forms.FormRow, {
                 label: choice.displayName,
-                trailing: () => t.React.createElement(d.Forms.FormRow.Arrow || "span", null),
+                trailing: () => t.React.createElement(d.Forms.FormRow.Arrow, null),
                 onPress: () => console.log(`Selected engine: ${choice.displayName}`)
             }))
     );
@@ -19,12 +19,12 @@ function EngineSettingsPage() {
 function SettingsPage() {
     const navigation = t.NavigationNative.useNavigation();
     return t.React.createElement(t.ReactNative.ScrollView, {style: {flex: 1}},
-        t.React.createElement(d.Forms.FormRow || "div", {
+        t.React.createElement(d.Forms.FormRow, {
             label: "Select Search Engine",
-            trailing: () => t.React.createElement(d.Forms.FormRow.Arrow || "span", null),
+            trailing: () => t.React.createElement(d.Forms.FormRow.Arrow, null),
             onPress: () => navigation.push("VendettaCustomPage", {title: "Select Search Engine", render: EngineSettingsPage})
         }),
-        t.React.createElement(t.ReactNative.Text || "div", {style: {textAlign: "center", margin: 10}}, "Reverse Image Search Plugin Settings")
+        t.React.createElement(t.ReactNative.Text, {style: {textAlign: "center", margin: 10}}, "Reverse Image Search Plugin Settings")
     );
 }
 
