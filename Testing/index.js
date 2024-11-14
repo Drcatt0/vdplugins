@@ -50,8 +50,7 @@
                         if (selectedSearchEngine === "FuzzySearch") {
                             searchUrl = await processWithFuzzySearch(imageAttachments[0].url);
                         } else {
-                            const searchEngineUrl = defaultSearchEngines[selectedSearchEngine];
-                            searchUrl = searchEngineUrl.replace("%s", encodeURIComponent(imageAttachments[0].url));
+                            searchUrl = defaultSearchEngines[selectedSearchEngine].replace("%s", encodeURIComponent(imageAttachments[0].url));
                         }
                         t.url.openURL(searchUrl);
                         M.hideActionSheet();
