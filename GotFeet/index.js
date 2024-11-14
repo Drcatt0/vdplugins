@@ -34,7 +34,12 @@
 
     const { sendMessage } = h.findByProps("sendMessage");
     const { getCurrentUser } = h.findByStoreName("UserStore");
-    const EMBED_COLOR = parseInt("3498db", 16); // Set a color for the embed
+    const { resolveSemanticColor } = h.findByProps("colors", "meta");
+    const ThemeStore = h.findByStoreName("ThemeStore");
+
+    // Function to determine the embed color based on theme
+    const EMBED_COLOR = () =>
+        parseInt(resolveSemanticColor(ThemeStore.theme, "semanticColors.BACKGROUND_SECONDARY").slice(1), 16);
 
     let A = [];
 
@@ -70,7 +75,7 @@
                         if (imagePosts.length > 0) {
                             const randomPost = imagePosts[Math.floor(Math.random() * imagePosts.length)];
                             const embed = {
-                                color: EMBED_COLOR,
+                                color: EMBED_COLOR(),
                                 title: randomPost.data.title,
                                 url: `https://reddit.com${randomPost.data.permalink}`,
                                 image: { url: randomPost.data.url },
