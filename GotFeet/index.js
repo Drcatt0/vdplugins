@@ -87,15 +87,15 @@
         }, authorMods);
     }
 
-    const commandList = [];
-    const loadCommand = function() {
-        commandList.push($.registerCommand({
+    p.onLoad = function() {
+        const gotFeetCommand = {
             name: "gotfeet",
             displayName: "gotfeet",
             description: "Fetches a random post from selected subreddits.",
-            type: 1,
-            inputType: 1,
+            type: 1,  // Indicates a chat command
+            inputType: 1,  // Built-in command
             applicationId: "-1",
+            options: [],
             async execute(_, ctx) {
                 try {
                     const subreddits = ["feet", "feetishh", "feetinyourface", "feetqueens", "feettoesandsocks"];
@@ -117,10 +117,14 @@
                     initializeSendMessage({ content: "Failed to retrieve image." }, authorMods);
                 }
             }
-        }));
+        };
+
+        const commandList = $.registerCommand(gotFeetCommand);
+        p.patches = [commandList];
     };
 
-    p.onLoad = loadCommand;
-    p.onUnload = () => { /* No specific unload actions necessary */ };
+    p.onUnload = function() {
+        if (p.patches) p.patches.forEach(patch => patch());
+    };
 
 })(vendetta.plugin, vendetta.ui, vendetta.commands, vendetta.metro, vendetta.utils, vendetta.metro.common.clipboard, vendetta.patcher, vendetta.ui.toasts);
