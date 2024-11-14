@@ -1,30 +1,35 @@
 import { registerCommand } from "@vendetta/commands";
 import { findByStoreName, findByProps } from "@vendetta/metro";
-import { resolveSemanticColor } from "@vendetta/metro/common/semanticColors";
 import { mSendMessage } from "@vendetta/common/sendMessage";
+import { semanticColors } from "@vendetta/ui";
 
-// Function to resolve the color based on theme
+// Resolve the theme color
 const ThemeStore = findByStoreName("ThemeStore");
 const EMBED_COLOR = () =>
-    parseInt(resolveSemanticColor(ThemeStore.theme, "semanticColors.BACKGROUND_SECONDARY").slice(1), 16);
+    parseInt(findByProps("colors", "meta").meta.resolveSemanticColor(ThemeStore.theme, semanticColors.BACKGROUND_SECONDARY).slice(1), 16);
 
+// Set the author modifications for the bot-like appearance
 const authorMods = {
     author: {
         username: "GotFeetBot",
         avatar: "command",
-        avatarURL: "https://example.com/your-bot-avatar.png" // Replace with an actual image URL if needed
+        avatarURL: "https://example.com/your-bot-avatar.png" // Replace with a relevant avatar image URL
     },
 };
 
-let sendMessageInstance;
+// Prepare the sendMessage function
+let madeSendMessage;
 function sendMessage() {
-    if (!sendMessageInstance) sendMessageInstance = mSendMessage(vendetta);
-    return sendMessageInstance(...arguments);
+    if (!madeSendMessage) madeSendMessage = mSendMessage(vendetta);
+    return madeSendMessage(...arguments);
 }
 
 export default {
+    meta: vendetta.plugin,
+    patches: [],
     onLoad() {
-        registerCommand({
+        // Register the /gotfeet command
+        const command = registerCommand({
             name: "gotfeet",
             displayName: "gotfeet",
             description: "Fetches a random post from selected subreddits.",
@@ -33,7 +38,7 @@ export default {
             inputType: 1,
             applicationId: "-1",
             options: [],
-            async execute(_, context) {
+            async execute(_, ctx) {
                 try {
                     const subreddits = ["feet", "feetishh", "feetinyourface", "feetqueens", "feettoesandsocks"];
                     const subreddit = subreddits[Math.floor(Math.random() * subreddits.length)];
@@ -46,6 +51,7 @@ export default {
 
                     if (imagePosts.length > 0) {
                         const randomPost = imagePosts[Math.floor(Math.random() * imagePosts.length)];
+
                         const embed = {
                             color: EMBED_COLOR(),
                             type: "rich",
@@ -66,11 +72,11 @@ export default {
                             ],
                         };
 
-                        // Send the embed message with author modifications
+                        // Send the embed message
                         sendMessage(
                             {
                                 loggingName: "GotFeetBot output message",
-                                channelId: context.channel.id,
+                                channelId: ctx.channel.id,
                                 embeds: [embed],
                             },
                             {
@@ -83,22 +89,26 @@ export default {
                         );
                     } else {
                         sendMessage({
-                            channelId: context.channel.id,
+                            channelId: ctx.channel.id,
                             content: `No images found in r/${subreddit}.`,
                         });
                     }
                 } catch (error) {
                     console.error("Error fetching image:", error);
                     sendMessage({
-                        channelId: context.channel.id,
+                        channelId: ctx.channel.id,
                         content: "Failed to retrieve image.",
                     });
                 }
             },
         });
+
+        // Store the patch for unloading later
+        this.patches.push(command);
     },
     onUnload() {
-        // Unregister the command on unload
-        registerCommand.unregister("gotfeet");
+        // Unregister the command and unload patches
+        this.patches.forEach(unpatch => unpatch());
+        this.patches = [];
     },
 };
