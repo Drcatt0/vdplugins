@@ -1,130 +1,102 @@
-(function(p, A, U, h, B, C, N, $) {
+(function (p, A, U, h, B, C, N, $) {
     "use strict";
 
-    function sendMessageWrapper(e) {
+    function createSendMessageFunction(e) {
         const { metro: { findByProps, findByStoreName, common: { lodash: { merge } } } } = e;
         const { _sendMessage } = findByProps("_sendMessage");
         const { createBotMessage } = findByProps("createBotMessage");
         const { BOT_AVATARS } = findByProps("BOT_AVATARS");
         const { getChannelId } = findByStoreName("SelectedChannelStore");
 
-        return function(message, options) {
-            if (!message.channelId) message.channelId = getChannelId();
-            if (!message.channelId) throw new Error("No channel id to receive the message into (channelId)");
+        return function (msg, options) {
+            if (!msg.channelId) msg.channelId = getChannelId();
+            if (!msg.channelId) throw new Error("No channel id to receive the message into (channelId)");
 
-            let msg = message;
+            let message = msg;
 
-            if (message.really) {
-                if (typeof options === "object") msg = merge(msg, options);
-                const args = [msg, {}];
+            if (msg.really) {
+                if (typeof options === "object") message = merge(message, options);
+                const args = [message, {}];
                 args[0].tts = args[0].tts || false;
 
-                for (const key of ["allowedMentions", "messageReference"]) {
-                    if (key in args[0]) {
-                        args[1][key] = args[0][key];
-                        delete args[0][key];
-                    }
-                }
-                
-                const overwriteKey = "overwriteSendMessageArg2";
-                if (overwriteKey in args[0]) {
-                    args[1] = args[0][overwriteKey];
-                    delete args[0][overwriteKey];
-                }
-                
                 return _sendMessage(message.channelId, ...args);
             }
 
-            if (options !== true) msg = createBotMessage(msg);
-
-            if (typeof options === "object") {
-                msg = merge(msg, options);
-
-                if (typeof options.author === "object") {
-                    const author = options.author;
-                    if (typeof author.avatarURL === "string") {
-                        BOT_AVATARS[author.avatar || author.avatarURL] = author.avatarURL;
-                        author.avatar = author.avatar || author.avatarURL;
-                        delete author.avatarURL;
-                    }
-                }
-            }
-
-            _sendMessage.receiveMessage(msg.channel_id, msg);
-            return msg;
+            if (options !== true) message = createBotMessage(message);
+            _sendMessage.receiveMessage(message.channel_id, message);
+            return message;
         };
     }
 
-    const EMBED_COLOR = 0xFF4500; // Reddit orange color
+    const EMBED_COLOR = () => parseInt("0xFF4500", 16); // Set to Reddit orange
     const authorMods = {
         author: {
-            username: "RedditFetcher",
+            username: "FeetBot",
             avatar: "command",
-            avatarURL: "https://www.redditinc.com/assets/images/site/reddit-logo.png"
-        }
+            avatarURL: "https://cdn.discordapp.com/embed/avatars/0.png" // Change URL as needed
+        },
     };
 
     let sendMessage;
-    function initializeSendMessage() {
+    function botSendMessage() {
         if (window.sendMessage) return window.sendMessage(...arguments);
-        if (!sendMessage) sendMessage = sendMessageWrapper(vendetta);
+        if (!sendMessage) sendMessage = createSendMessageFunction(vendetta);
         return sendMessage(...arguments);
     }
 
-    function sendRedditEmbed(ctx, title, subreddit, author, imageUrl) {
-        initializeSendMessage({
-            loggingName: "Reddit image fetch",
-            channelId: ctx.channel.id,
-            embeds: [{
-                color: EMBED_COLOR,
-                type: "rich",
-                title: title || `Random post from r/${subreddit}`,
-                url: `https://reddit.com/r/${subreddit}`,
-                description: `From r/${subreddit} by u/${author}`,
-                image: { url: imageUrl },
-                footer: { text: "Fetched by RedditFetcher" }
-            }]
-        }, authorMods);
-    }
+    var plugin = {
+        meta: vendetta.plugin,
+        patches: [],
+        onUnload() {
+            this.patches.forEach((unpatch) => unpatch());
+            this.patches = [];
+        },
+        onLoad() {
+            try {
+                const helloCommand = {
+                    get(args, ctx) {
+                        try {
+                            const messageMods = {
+                                ...authorMods,
+                                interaction: {
+                                    name: "/hello",
+                                    user: h.findByStoreName("UserStore").getCurrentUser(),
+                                },
+                            };
+                            botSendMessage({
+                                loggingName: "Hello output message",
+                                channelId: ctx.channel.id,
+                                embeds: [
+                                    {
+                                        color: EMBED_COLOR(),
+                                        type: "rich",
+                                        title: "Hello World!",
+                                        description: "This is a test message from FeetBot.",
+                                    },
+                                ],
+                            }, messageMods);
+                        } catch (e) {
+                            console.error(e);
+                            alert("There was an error while executing /hello\n" + e.stack);
+                        }
+                    },
+                };
 
-    p.onLoad = function() {
-        const gotFeetCommand = {
-            name: "gotfeet",
-            displayName: "gotfeet",
-            description: "Fetches a random post from selected subreddits.",
-            type: 1,  // Indicates a chat command
-            inputType: 1,  // Built-in command
-            applicationId: "-1",
-            options: [],
-            async execute(_, ctx) {
-                try {
-                    const subreddits = ["feet", "feetishh", "feetinyourface", "feetqueens", "feettoesandsocks"];
-                    const subreddit = subreddits[Math.floor(Math.random() * subreddits.length)];
-                    const response = await fetch(`https://www.reddit.com/r/${subreddit}/top.json?limit=10`);
-                    const data = await response.json();
-
-                    const imagePosts = data.data.children.filter(post => post.data.post_hint === "image");
-                    if (imagePosts.length > 0) {
-                        const randomPost = imagePosts[Math.floor(Math.random() * imagePosts.length)];
-                        const { title, url, author } = randomPost.data;
-
-                        sendRedditEmbed(ctx, title, subreddit, author, url);
-                    } else {
-                        initializeSendMessage({ content: `No images found in r/${subreddit}.` }, authorMods);
-                    }
-                } catch (error) {
-                    console.error("Error fetching image:", error);
-                    initializeSendMessage({ content: "Failed to retrieve image." }, authorMods);
-                }
+                // Register the /hello command
+                this.patches.push(U.registerCommand({
+                    type: 1,
+                    inputType: 1,
+                    applicationId: "-1",
+                    execute: helloCommand.get,
+                    name: "hello",
+                    description: "Sends a Hello World message",
+                }));
+            } catch (e) {
+                console.error(e);
+                alert("There was an error while loading FeetBot\n" + e.stack);
             }
-        };
-
-        const commandList = $.registerCommand(gotFeetCommand);
-        p.patches = [commandList];
+        },
     };
 
-    p.onUnload = function() {
-        if (p.patches) p.patches.forEach(patch => patch());
-    };
-
-})(vendetta.plugin, vendetta.ui, vendetta.commands, vendetta.metro, vendetta.utils, vendetta.metro.common.clipboard, vendetta.patcher, vendetta.ui.toasts);
+    return plugin;
+})({}, vendetta.ui, vendetta.commands, vendetta.metro, vendetta.utils, vendetta.metro.common.clipboard, vendetta.patcher, vendetta.ui.toasts);
