@@ -10,17 +10,22 @@
     // Variable to store the currently selected search engine name, default to SauceNAO
     let selectedSearchEngine = "SauceNAO";
 
+    // Function to process with FuzzySearch if selected
     async function processWithFuzzySearch(url) {
-        const finalLink = `${defaultSearchEngines.FuzzySearch}${encodeURIComponent(url)}`;
-        const response = await fetch(finalLink, {
-            method: "GET",
-            headers: {
-                "x-api-key": "eluIOaOhIP1RXlgYetkcZCF8la7p3NoCPy8U0i8dKiT4xdIH",
-                "Accept": "application/json"
-            }
-        });
-        const data = await response.json();
-        return data.url || url;
+        try {
+            const finalLink = `${defaultSearchEngines.FuzzySearch}${encodeURIComponent(url)}`;
+            const response = await fetch(finalLink, {
+                method: "GET",
+                headers: {
+                    "x-api-key": "eluIOaOhIP1RXlgYetkcZCF8la7p3NoCPy8U0i8dKiT4xdIH",
+                    "Accept": "application/json"
+                }
+            });
+            const data = await response.json();
+            return data.url || url;
+        } catch {
+            return url; // Fallback to original URL if FuzzySearch fails
+        }
     }
 
     const M = g.findByProps("openLazy", "hideActionSheet"),
@@ -49,10 +54,8 @@
                     const oe = async function () {
                         let searchUrl;
                         if (selectedSearchEngine === "FuzzySearch") {
-                            // Use FuzzySearch to get a processed URL and then open it
                             searchUrl = await processWithFuzzySearch(imageAttachments[0].url);
                         } else {
-                            // Use the selected search engine’s URL format
                             searchUrl = defaultSearchEngines[selectedSearchEngine].replace("%s", encodeURIComponent(imageAttachments[0].url));
                         }
                         t.url.openURL(searchUrl);
