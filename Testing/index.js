@@ -1,82 +1,81 @@
-(function(f,L,g,t,B,C,c,d,F,D,G,k,O,E){"use strict";const H="https://saucenao.com";
+(function(f, L, g, t, B, C, c, d, F, D, G, k, O, E) {
+    "use strict";
 
-// Reverse Image Search Engines
-const searchEngines = {
-    "SauceNAO": "https://saucenao.com",
-    "Google": "https://images.google.com",
-    "TinEye": "https://tineye.com",
-};
+    // Reverse Image Search Engines
+    const searchEngines = {
+        "SauceNAO": "https://saucenao.com",
+        "Google": "https://images.google.com",
+        "TinEye": "https://tineye.com",
+    };
 
-// Map choices for search engines
-const searchEngineChoices = Object.entries(searchEngines).map(([name, url]) => ({ name, url }));
+    // Convert search engine list to a format for display
+    const searchEngineChoices = Object.entries(searchEngines).map(([name, url]) => ({ name, url }));
 
-// Search Engine Selection Page
-function SearchEngineSettingsPage() {
-    if (!t.ReactNative.ScrollView || !d.Forms.Search || !d.Forms.FormRow) {
-        console.error("One of the components is undefined:", {
-            ScrollView: t.ReactNative.ScrollView,
-            Search: d.Forms.Search,
-            FormRow: d.Forms.FormRow
-        });
-        return t.React.createElement(t.ReactNative.Text, null, "Error: Missing components.");
-    }
+    // Search Engine Settings Page
+    function SearchEngineSettingsPage() {
+        const ScrollView = t.ReactNative.ScrollView ?? t.ReactNative.View; // Use View as fallback if ScrollView is undefined
+        const FormRow = d.Forms?.FormRow ?? t.ReactNative.Text; // Use Text as fallback if FormRow is undefined
+        const Search = d.Forms?.Search ?? t.ReactNative.Text; // Use Text as fallback if Search is undefined
 
-    const [searchTerm, setSearchTerm] = t.React.useState("");
+        const [searchTerm, setSearchTerm] = t.React.useState("");
 
-    return t.React.createElement(t.ReactNative.ScrollView, { style: { flex: 1 } },
-        t.React.createElement(d.Forms.Search, {
-            placeholder: "Search Engine",
-            onChangeText: setSearchTerm,
-        }),
-        searchEngineChoices
-            .filter(choice => choice.name.toLowerCase().includes(searchTerm.toLowerCase()))
-            .map(choice => t.React.createElement(d.Forms.FormRow, {
-                key: choice.name,
-                label: choice.name,
-                trailing: () => t.React.createElement(d.Forms.FormRow.Arrow, null),
-                onPress: () => {
-                    O.set("selectedEngine", choice.url);
-                    E.showToast(`Selected ${choice.name} as search engine`, c.getAssetIDByName("check"));
-                },
-            }))
-    );
-}
-
-// Main Settings Page
-function SettingsPage() {
-    if (!t.NavigationNative || !t.NavigationNative.useNavigation) {
-        console.error("Navigation is undefined:", t.NavigationNative);
-        return t.React.createElement(t.ReactNative.Text, null, "Error: Navigation component missing.");
-    }
-
-    const navigation = t.NavigationNative.useNavigation();
-
-    return t.React.createElement(t.ReactNative.ScrollView, { style: { flex: 1 } },
-        t.React.createElement(d.Forms.FormRow, {
-            label: "Select Search Engine",
-            trailing: () => t.React.createElement(d.Forms.FormRow.Arrow, null),
-            onPress: () => navigation.push("VendettaCustomPage", {
-                title: "Select Search Engine",
-                render: SearchEngineSettingsPage,
+        return t.React.createElement(ScrollView, { style: { flex: 1 } },
+            Search && t.React.createElement(Search, {
+                placeholder: "Search Engine",
+                onChangeText: setSearchTerm,
             }),
-        }),
-        t.React.createElement(t.ReactNative.Text, { style: { textAlign: "center", margin: 10 } }, "Configure your preferred reverse image search engine.")
-    );
-}
+            searchEngineChoices
+                .filter(choice => choice.name.toLowerCase().includes(searchTerm.toLowerCase()))
+                .map(choice => t.React.createElement(FormRow, {
+                    key: choice.name,
+                    label: choice.name || "Fallback Label",
+                    trailing: () => t.React.createElement(FormRow.Arrow ?? t.ReactNative.Text, null, "➔"),
+                    onPress: () => {
+                        O.set("selectedEngine", choice.url);
+                        E.showToast(`Selected ${choice.name} as search engine`, c.getAssetIDByName("check"));
+                    },
+                }))
+        );
+    }
 
-// Load and unload functions
-let b = [];
-var ne = {
-    onLoad: function() { 
-        if (typeof K === "function") {
-            b = [K()];
-        } else {
-            console.error("Function K is undefined or not a function.");
+    // Main Settings Page
+    function SettingsPage() {
+        const navigation = t.NavigationNative?.useNavigation?.();
+
+        if (!navigation) {
+            console.error("Navigation is undefined");
+            return t.React.createElement(t.ReactNative.Text, null, "Error: Navigation component missing.");
         }
-    },
-    onUnload: function() { for (const e of b) e() },
-    settings: SettingsPage
-};
 
-return f.default = ne, Object.defineProperty(f, "__esModule", { value: !0 }), f
+        const ScrollView = t.ReactNative.ScrollView ?? t.ReactNative.View;
+        const FormRow = d.Forms?.FormRow ?? t.ReactNative.Text;
+
+        return t.React.createElement(ScrollView, { style: { flex: 1 } },
+            t.React.createElement(FormRow, {
+                label: "Select Search Engine",
+                trailing: () => t.React.createElement(FormRow.Arrow ?? t.ReactNative.Text, null, "➔"),
+                onPress: () => navigation.push("VendettaCustomPage", {
+                    title: "Select Search Engine",
+                    render: SearchEngineSettingsPage,
+                }),
+            }),
+            t.React.createElement(t.ReactNative.Text, { style: { textAlign: "center", margin: 10 } }, "Configure your preferred reverse image search engine.")
+        );
+    }
+
+    // Plugin load/unload functions
+    let b = [];
+    var ne = {
+        onLoad: function() {
+            if (typeof K === "function") {
+                b = [K()];
+            } else {
+                console.error("Function K is undefined or not a function.");
+            }
+        },
+        onUnload: function() { for (const e of b) e() },
+        settings: SettingsPage
+    };
+
+    return f.default = ne, Object.defineProperty(f, "__esModule", { value: !0 }), f
 })({}, vendetta.plugin, vendetta.metro, vendetta.metro.common, vendetta.patcher, vendetta.ui, vendetta.ui.assets, vendetta.ui.components, vendetta.utils, vendetta, vendetta.commands, vendetta.ui.alerts, vendetta.storage, vendetta.ui.toasts);
