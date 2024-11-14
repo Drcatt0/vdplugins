@@ -55,20 +55,13 @@
                     
                     if (imagePosts.length > 0) {
                         const randomPost = imagePosts[Math.floor(Math.random() * imagePosts.length)];
-                        const embedMessage = {
-                            content: "",
-                            embeds: [
-                                {
-                                    title: `View on Reddit - r/${subreddit}`,
-                                    url: `https://www.reddit.com${randomPost.data.permalink}`,
-                                    image: { url: randomPost.data.url },
-                                    footer: {
-                                        text: `Posted by u/${randomPost.data.author}`
-                                    }
-                                }
-                            ]
-                        };
-                        sendBotMessage(ctx.channel.id, embedMessage); // Sends the embedded message
+                        const message = `
+**Title**: ${randomPost.data.title}
+**Subreddit**: r/${subreddit}
+**Author**: u/${randomPost.data.author}
+**[View Image](${randomPost.data.url})**
+                        `.trim();
+                        sendBotMessage(ctx.channel.id, message);
                     } else {
                         sendBotMessage(ctx.channel.id, `No images found in r/${subreddit}.`);
                     }
