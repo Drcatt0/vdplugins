@@ -1,13 +1,13 @@
 (function (f, L, g, t, B, C, c, d, F, D, G, k, O, E) {
     "use strict";
     const defaultSearchEngines = {
-        SauceNAO: "https://saucenao.com",
+        SauceNAO: "https://saucenao.com/search.php?url=%s",
         Google: "https://www.google.com/searchbyimage?image_url=%s&safe=off",
         TinEye: "https://tineye.com/search?url=%s",
         FuzzySearch: "https://api-next.fuzzysearch.net/v1/url?url="
     };
 
-    // Variable to store the currently selected search engine URL, defaults to SauceNAO
+    // Variable to store the currently selected search engine name, default to SauceNAO
     let selectedSearchEngine = "SauceNAO";
 
     async function processWithFuzzySearch(url) {
@@ -45,19 +45,20 @@
                           u = j.getMessage(n.channel_id, n.id),
                           imageAttachments = u?.attachments?.filter(att => att.content_type?.startsWith("image"));
                     if (!imageAttachments || imageAttachments.length === 0) return;
+
                     const oe = async function () {
                         let searchUrl;
                         if (selectedSearchEngine === "FuzzySearch") {
+                            // Use FuzzySearch to get a processed URL and then open it
                             searchUrl = await processWithFuzzySearch(imageAttachments[0].url);
-                        } else if (selectedSearchEngine === "Google" || selectedSearchEngine === "TinEye") {
-                            const fuzzyURL = await processWithFuzzySearch(imageAttachments[0].url);
-                            searchUrl = defaultSearchEngines[selectedSearchEngine].replace("%s", encodeURIComponent(fuzzyURL));
                         } else {
+                            // Use the selected search engine’s URL format
                             searchUrl = defaultSearchEngines[selectedSearchEngine].replace("%s", encodeURIComponent(imageAttachments[0].url));
                         }
                         t.url.openURL(searchUrl);
                         M.hideActionSheet();
                     };
+
                     v.splice(re, 0, t.React.createElement(P, {
                         label: selectedSearchEngine,
                         icon: t.React.createElement(P.Icon, {
@@ -86,7 +87,7 @@
             }),
             Object.entries(defaultSearchEngines)
                 .filter(([name]) => name.toLowerCase().includes(searchTerm.toLowerCase()))
-                .map(([name, url]) => t.React.createElement(FormRow, {
+                .map(([name]) => t.React.createElement(FormRow, {
                     key: name,
                     label: name,
                     trailing: () => t.React.createElement(FormRow.Arrow ?? t.ReactNative.Text, null, "➔"),
