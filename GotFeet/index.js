@@ -3,26 +3,27 @@ import { semanticColors } from "@vendetta/ui";
 import { registerCommand } from "@vendetta/commands";
 import { findByStoreName, findByProps } from "@vendetta/metro";
 
+// Resolve embed color using the theme
 const ThemeStore = findByStoreName("ThemeStore");
-
-// Setting the color for the embed to match the theme
-export const EMBED_COLOR = () =>
+const EMBED_COLOR = () =>
     parseInt(
         findByProps("colors", "meta").meta.resolveSemanticColor(ThemeStore.theme, semanticColors.BACKGROUND_SECONDARY).slice(1),
         16
     );
 
+// Author modifications for embed
 const authorMods = {
     author: {
-        username: "HelloBot",
+        username: "TokenUtils",
         avatar: "command",
-        avatarURL: common.AVATARS.command, // Replace with specific avatar URL if needed
+        avatarURL: common.AVATARS.command,
     },
 };
 
-// Helper function to send a message, mimicking TokenUtils style
+// Send message function used for embedding the response
 let madeSendMessage;
 function sendMessage() {
+    if (window.sendMessage) return window.sendMessage?.(...arguments);
     if (!madeSendMessage) madeSendMessage = common.mSendMessage(vendetta);
     return madeSendMessage(...arguments);
 }
@@ -31,59 +32,61 @@ export default {
     meta: vendetta.plugin,
     patches: [],
     onUnload() {
-        // Unpatch all when the plugin is unloaded
+        // Unpatch everything on unload
         this.patches.forEach((up) => up());
         this.patches = [];
     },
     onLoad() {
         try {
-            const helloCommand = {
+            // Define `/token get` command
+            const getCommand = {
                 execute(args, ctx) {
                     try {
-                        // Setting up the message modifications (author and interaction)
                         const messageMods = {
                             ...authorMods,
                             interaction: {
-                                name: "/hello",
+                                name: "/token get",
                                 user: findByStoreName("UserStore").getCurrentUser(),
                             },
                         };
 
-                        // Sending an embed with "Hello World" content
+                        const { getToken } = findByProps("getToken");
                         sendMessage(
                             {
-                                loggingName: "HelloBot output message",
+                                loggingName: "Token get output message",
                                 channelId: ctx.channel.id,
                                 embeds: [
                                     {
                                         color: EMBED_COLOR(),
                                         type: "rich",
-                                        title: "Hello World",
-                                        description: "This is a test message in an embed.",
+                                        title: "Token of the current account",
+                                        description: `${getToken()}`,
                                     },
                                 ],
                             },
                             messageMods
                         );
-                    } catch (error) {
-                        console.error("Error executing /hello command:", error);
+                    } catch (e) {
+                        console.error(e);
+                        alert("There was an error while executing /token get\n" + e.stack);
                     }
                 },
             };
 
-            const commandRegistration = registerCommand({
-                name: "hello",
-                displayName: "hello",
-                description: "Sends a Hello World message in an embed",
+            // Register the `/token get` command
+            const commandConfig = {
                 type: 1,
                 inputType: 1,
                 applicationId: "-1",
-                execute: helloCommand.execute,
-            });
+                execute: getCommand.execute,
+                name: "token get",
+                description: "Shows your current user token",
+            };
 
-            this.patches.push(commandRegistration);
-        } catch (error) {
-            console.error("Error loading HelloBot:", error);
+            this.patches.push(registerCommand(commandConfig));
+        } catch (e) {
+            console.error(e);
+            alert("There was an error while loading TokenUtils\n" + e.stack);
         }
     },
 };
