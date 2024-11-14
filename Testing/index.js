@@ -2,30 +2,24 @@
     "use strict";
     const defaultSearchEngines = {
         SauceNAO: "https://saucenao.com/search.php?url=%s",
-        Google: "https://www.google.com/searchbyimage?image_url=%s&safe=off",
+        Google: "https://www.google.com/searchbyimage?image_url=%s",
         TinEye: "https://tineye.com/search?url=%s",
         FuzzySearch: "https://api-next.fuzzysearch.net/v1/url?url="
     };
 
-    // Variable to store the currently selected search engine name, default to SauceNAO
     let selectedSearchEngine = "SauceNAO";
 
-    // Function to process with FuzzySearch if selected
     async function processWithFuzzySearch(url) {
-        try {
-            const finalLink = `${defaultSearchEngines.FuzzySearch}${encodeURIComponent(url)}`;
-            const response = await fetch(finalLink, {
-                method: "GET",
-                headers: {
-                    "x-api-key": "eluIOaOhIP1RXlgYetkcZCF8la7p3NoCPy8U0i8dKiT4xdIH",
-                    "Accept": "application/json"
-                }
-            });
-            const data = await response.json();
-            return data.url || url;
-        } catch {
-            return url; // Fallback to original URL if FuzzySearch fails
-        }
+        const finalLink = `${defaultSearchEngines.FuzzySearch}${encodeURIComponent(url)}`;
+        const response = await fetch(finalLink, {
+            method: "GET",
+            headers: {
+                "x-api-key": "eluIOaOhIP1RXlgYetkcZCF8la7p3NoCPy8U0i8dKiT4xdIH",
+                "Accept": "application/json"
+            }
+        });
+        const data = await response.json();
+        return data.url || url;
     }
 
     const M = g.findByProps("openLazy", "hideActionSheet"),
@@ -56,7 +50,8 @@
                         if (selectedSearchEngine === "FuzzySearch") {
                             searchUrl = await processWithFuzzySearch(imageAttachments[0].url);
                         } else {
-                            searchUrl = defaultSearchEngines[selectedSearchEngine].replace("%s", encodeURIComponent(imageAttachments[0].url));
+                            const searchEngineUrl = defaultSearchEngines[selectedSearchEngine];
+                            searchUrl = searchEngineUrl.replace("%s", encodeURIComponent(imageAttachments[0].url));
                         }
                         t.url.openURL(searchUrl);
                         M.hideActionSheet();
@@ -75,7 +70,6 @@
         });
     }
 
-    // Search Engine Settings Page
     function SearchEngineSettingsPage() {
         const ScrollView = t.ReactNative.ScrollView ?? t.ReactNative.View;
         const FormRow = d.Forms?.FormRow ?? t.ReactNative.Text;
@@ -90,7 +84,7 @@
             }),
             Object.entries(defaultSearchEngines)
                 .filter(([name]) => name.toLowerCase().includes(searchTerm.toLowerCase()))
-                .map(([name]) => t.React.createElement(FormRow, {
+                .map(([name, url]) => t.React.createElement(FormRow, {
                     key: name,
                     label: name,
                     trailing: () => t.React.createElement(FormRow.Arrow ?? t.ReactNative.Text, null, "➔"),
@@ -102,7 +96,6 @@
         );
     }
 
-    // Main Settings Page
     function SettingsPage() {
         const navigation = t.NavigationNative?.useNavigation?.();
 
@@ -127,7 +120,6 @@
         );
     }
 
-    // Plugin load/unload functions
     let b = [];
     var ne = {
         onLoad: function () { return b = [K()]; },
