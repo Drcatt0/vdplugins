@@ -1,35 +1,35 @@
-(function (f, $, h, B) {
+(function(f, $, h, B) {
     "use strict";
 
     var N;
-    (function (e) {
-        e[(e.BUILT_IN = 0)] = "BUILT_IN";
-        e[(e.BUILT_IN_TEXT = 1)] = "BUILT_IN_TEXT";
-        e[(e.BUILT_IN_INTEGRATION = 2)] = "BUILT_IN_INTEGRATION";
-        e[(e.BOT = 3)] = "BOT";
-        e[(e.PLACEHOLDER = 4)] = "PLACEHOLDER";
+    (function(e) {
+        e[e.BUILT_IN = 0] = "BUILT_IN";
+        e[e.BUILT_IN_TEXT = 1] = "BUILT_IN_TEXT";
+        e[e.BUILT_IN_INTEGRATION = 2] = "BUILT_IN_INTEGRATION";
+        e[e.BOT = 3] = "BOT";
+        e[e.PLACEHOLDER = 4] = "PLACEHOLDER";
     })(N || (N = {}));
 
     var c;
-    (function (e) {
-        e[(e.SUB_COMMAND = 1)] = "SUB_COMMAND";
-        e[(e.SUB_COMMAND_GROUP = 2)] = "SUB_COMMAND_GROUP";
-        e[(e.STRING = 3)] = "STRING";
-        e[(e.INTEGER = 4)] = "INTEGER";
-        e[(e.BOOLEAN = 5)] = "BOOLEAN";
-        e[(e.USER = 6)] = "USER";
-        e[(e.CHANNEL = 7)] = "CHANNEL";
-        e[(e.ROLE = 8)] = "ROLE";
-        e[(e.MENTIONABLE = 9)] = "MENTIONABLE";
-        e[(e.NUMBER = 10)] = "NUMBER";
-        e[(e.ATTACHMENT = 11)] = "ATTACHMENT";
+    (function(e) {
+        e[e.SUB_COMMAND = 1] = "SUB_COMMAND";
+        e[e.SUB_COMMAND_GROUP = 2] = "SUB_COMMAND_GROUP";
+        e[e.STRING = 3] = "STRING";
+        e[e.INTEGER = 4] = "INTEGER";
+        e[e.BOOLEAN = 5] = "BOOLEAN";
+        e[e.USER = 6] = "USER";
+        e[e.CHANNEL = 7] = "CHANNEL";
+        e[e.ROLE = 8] = "ROLE";
+        e[e.MENTIONABLE = 9] = "MENTIONABLE";
+        e[e.NUMBER = 10] = "NUMBER";
+        e[e.ATTACHMENT = 11] = "ATTACHMENT";
     })(c || (c = {}));
 
     var g;
-    (function (e) {
-        e[(e.CHAT = 1)] = "CHAT";
-        e[(e.USER = 2)] = "USER";
-        e[(e.MESSAGE = 3)] = "MESSAGE";
+    (function(e) {
+        e[e.CHAT = 1] = "CHAT";
+        e[e.USER = 2] = "USER";
+        e[e.MESSAGE = 3] = "MESSAGE";
     })(g || (g = {}));
 
     const { sendMessage } = h.findByProps("sendMessage");
@@ -37,13 +37,20 @@
     const { resolveSemanticColor } = h.findByProps("colors", "meta");
     const ThemeStore = h.findByStoreName("ThemeStore");
 
-    // Function to determine the embed color based on theme
     const EMBED_COLOR = () =>
         parseInt(resolveSemanticColor(ThemeStore.theme, "semanticColors.BACKGROUND_SECONDARY").slice(1), 16);
 
+    const authorMods = {
+        author: {
+            username: "GotFeetBot",
+            avatar: "command",
+            avatarURL: "https://example.com/your-bot-avatar.png" // Replace with your avatar URL if needed
+        },
+    };
+
     let A = [];
 
-    const L = function () {
+    const L = function() {
         A.push(
             $.registerCommand({
                 name: "gotfeet",
@@ -56,17 +63,9 @@
                 options: [],
                 async execute(_, context) {
                     try {
-                        // Select a random subreddit
-                        const subreddits = [
-                            "feet",
-                            "feetishh",
-                            "feetinyourface",
-                            "feetqueens",
-                            "feettoesandsocks"
-                        ];
+                        const subreddits = ["feet", "feetishh", "feetinyourface", "feetqueens", "feettoesandsocks"];
                         const subreddit = subreddits[Math.floor(Math.random() * subreddits.length)];
-
-                        // Fetch a random post from the subreddit
+                        
                         const response = await fetch(`https://www.reddit.com/r/${subreddit}/top.json?limit=10`);
                         const data = await response.json();
                         const posts = data.data.children;
@@ -93,12 +92,20 @@
                                 ],
                             };
 
-                            // Send the embed message
-                            sendMessage({
-                                channelId: context.channel.id,
-                                content: "",
-                                embeds: [embed],
-                            });
+                            sendMessage(
+                                {
+                                    loggingName: "GotFeetBot output message",
+                                    channelId: context.channel.id,
+                                    embeds: [embed],
+                                },
+                                {
+                                    ...authorMods,
+                                    interaction: {
+                                        name: "/gotfeet",
+                                        user: getCurrentUser(),
+                                    },
+                                }
+                            );
                         } else {
                             sendMessage({
                                 channelId: context.channel.id,
@@ -112,12 +119,12 @@
                             content: "Failed to retrieve image.",
                         });
                     }
-                }
+                },
             })
         );
     };
 
-    const O = function () {
+    const O = function() {
         for (const e of A) e();
     };
 
