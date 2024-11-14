@@ -1,20 +1,87 @@
 (function(f, L, g, t, B, C, c, d, F, D, G, k, O, E) {
     "use strict";
 
-    // Search Engines for Configuration Menu
+    const H = "https://saucenao.com";
+
+    var w = {
+        translate: async function(e) {
+            let a = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : "auto",
+                i = arguments.length > 2 ? arguments[2] : void 0,
+                s = arguments.length > 3 && arguments[3] !== void 0 ? arguments[3] : !1;
+            try {
+                if (s) return { source_lang: a, text: e };
+                const n = await (await fetch(H, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ text: e, source_lang: a, target_lang: i })
+                })).json();
+                if (n.code !== 200) throw Error(`Failed to translate text from DeepL: ${n.message}`);
+                return { source_lang: a, text: n.data };
+            } catch (n) {
+                throw Error(`Failed to fetch from DeepL: ${n}`);
+            }
+        }
+    };
+
+    const M = g.findByProps("openLazy", "hideActionSheet");
+    const P = d.Forms?.FormRow ?? t.ReactNative.Text;
+    const j = g.findByStoreName("MessageStore");
+    const V = g.findByStoreName("ChannelStore");
+    const z = t.stylesheet.createThemedStyleSheet({
+        iconComponent: { width: 24, height: 24, tintColor: C.semanticColors.INTERACTIVE_NORMAL }
+    });
+    let T = [];
+
+    function K() {
+        return B.before("openLazy", M, function(e) {
+            let [a, i, s] = e;
+            const n = s?.message;
+            i !== "MessageLongPressActionSheet" || !n || a.then(function(A) {
+                const ae = B.after("default", A, function(ue, ie) {
+                    t.React.useEffect(function() {
+                        return function() { ae(); };
+                    }, []);
+                    const v = F.findInReactTree(ie, function(r) {
+                        var l, h;
+                        return (r == null || (h = r[0]) === null || h === void 0 || (l = h.type) === null || l === void 0 ? void 0 : l.name) === "ButtonRow";
+                    });
+                    if (!v) return;
+                    const re = Math.max(v.findIndex(function(r) { return r.props.message === t.i18n.Messages.MARK_UNREAD; }), 0);
+                    const u = j.getMessage(n.channel_id, n.id);
+                    const imageAttachments = u?.attachments?.filter(att => att.content_type?.startsWith("image"));
+                    if (!imageAttachments || imageAttachments.length === 0) return;
+                    const S = u?.id ?? n.id, se = u?.content ?? n.content;
+                    const I = T.find(function(r) { return Object.keys(r)[0] === S; }, "cache object");
+                    const _ = "SauceNAO", icon = c.getAssetIDByName("ic_search");
+                    const oe = function() {
+                        if (imageAttachments.length === 1) {
+                            const saucenaoUrl = `https://saucenao.com/search.php?url=${encodeURIComponent(imageAttachments[0].url)}`;
+                            t.url.openURL(saucenaoUrl);
+                        } else {
+                            const links = imageAttachments.map((att, index) => `> [Image ${index + 1}](https://saucenao.com/search.php?url=${encodeURIComponent(att.url)})`).join("\n");
+                            t.FluxDispatcher.dispatch({ type: "MESSAGE_UPDATE", message: { ...u, content: links, guild_id: V.getChannel(u.channel_id).guild_id }, log_edit: !1 });
+                        }
+                        M.hideActionSheet();
+                    };
+                    v.splice(re, 0, t.React.createElement(P, {
+                        label: _,
+                        icon: t.React.createElement(P.Icon, { source: icon, IconComponent: function() { return t.React.createElement(t.ReactNative.Image, { resizeMode: "cover", style: z.iconComponent, source: icon }); } }),
+                        onPress: oe
+                    }));
+                });
+            });
+        });
+    }
+
+    // Reverse Image Search Engines Configuration
     const searchEngines = {
         "SauceNAO": "https://saucenao.com",
         "Google": "https://images.google.com",
         "TinEye": "https://tineye.com",
     };
 
-    // Convert search engine list to a format for display
     const searchEngineChoices = Object.entries(searchEngines).map(([name, url]) => ({ name, url }));
 
-    // Settings storage (default to SauceNAO if no engine is selected)
-    O.selectedEngineURL ??= "https://saucenao.com";
-
-    // Search Engine Settings Page (Configuration Menu)
     function SearchEngineSettingsPage() {
         const ScrollView = t.ReactNative.ScrollView ?? t.ReactNative.View;
         const FormRow = d.Forms?.FormRow ?? t.ReactNative.Text;
@@ -34,14 +101,12 @@
                     label: choice.name || "Fallback Label",
                     trailing: () => t.React.createElement(FormRow.Arrow ?? t.ReactNative.Text, null, "➔"),
                     onPress: () => {
-                        O.selectedEngineURL = choice.url;
-                        E.showToast(`Selected ${choice.name} as search engine`, c.getAssetIDByName("check"));
+                        alert(`Selected ${choice.name} with URL: ${choice.url}`);
                     },
                 }))
         );
     }
 
-    // Main Settings Page
     function SettingsPage() {
         const navigation = t.NavigationNative?.useNavigation?.();
 
@@ -66,33 +131,10 @@
         );
     }
 
-    // Main plugin functionality
-    const H = O.selectedEngineURL;
-
-    var w = {
-        translate: async function(e) {
-            let a = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : "auto",
-                i = arguments.length > 2 ? arguments[2] : void 0,
-                s = arguments.length > 3 && arguments[3] !== void 0 ? arguments[3] : !1;
-            try {
-                if (s) return { source_lang: a, text: e };
-                const n = await (await fetch(H, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ text: e, source_lang: a, target_lang: i })
-                })).json();
-                if (n.code !== 200) throw Error(`Failed to translate text from DeepL: ${n.message}`);
-                return { source_lang: a, text: n.data };
-            } catch (n) {
-                throw Error(`Failed to fetch from DeepL: ${n}`);
-            }
-        }
-    };
-
     let b = [];
     var ne = {
-        onLoad: function() { return b = [] },
-        onUnload: function() { for (const e of b) e() },
+        onLoad: function() { return b = [K()]; },
+        onUnload: function() { for (const e of b) e(); },
         settings: SettingsPage
     };
 
