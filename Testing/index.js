@@ -2,7 +2,7 @@
     "use strict";
 
     // Default reverse image search engine URL
-    const defaultSearchUrl = "https://saucenao.com";
+    let selectedSearchUrl = "https://saucenao.com";
 
     // Reverse Image Search Engines
     const searchEngines = {
@@ -14,24 +14,17 @@
     // Convert search engine list to a format for display
     const searchEngineChoices = Object.entries(searchEngines).map(([name, url]) => ({ name, url }));
 
-    // Store user-selected search engine in memory (or use default if none selected)
-    let selectedSearchUrl = defaultSearchUrl;
-
-    // Reverse Image Search Action Button
     const M = g.findByProps("openLazy", "hideActionSheet");
-    const P = d.Forms?.FormRow ?? t.ReactNative.Text;
+    const P = ((g.findByProps("ActionSheetRow")?.ActionSheetRow) ?? d.Forms.FormRow);
     const j = g.findByStoreName("MessageStore");
     const V = g.findByStoreName("ChannelStore");
-    const z = t.stylesheet.createThemedStyleSheet({
-        iconComponent: { width: 24, height: 24, tintColor: C.semanticColors.INTERACTIVE_NORMAL }
-    });
+    const z = t.stylesheet.createThemedStyleSheet({ iconComponent: { width: 24, height: 24, tintColor: C.semanticColors.INTERACTIVE_NORMAL } });
 
     function addReverseImageSearchButton() {
         return B.before("openLazy", M, function(e) {
             let [a, i, s] = e;
             const n = s?.message;
 
-            // Ensure this is the long-press action sheet and there is a message
             if (i !== "MessageLongPressActionSheet" || !n) return;
 
             a.then(function(A) {
@@ -51,12 +44,11 @@
                     const icon = c.getAssetIDByName("ic_search");
 
                     const onPress = () => {
-                        const searchUrl = selectedSearchUrl;
                         if (imageAttachments.length === 1) {
-                            const searchEngineUrl = `${searchUrl}/search.php?url=${encodeURIComponent(imageAttachments[0].url)}`;
+                            const searchEngineUrl = `${selectedSearchUrl}/search.php?url=${encodeURIComponent(imageAttachments[0].url)}`;
                             t.url.openURL(searchEngineUrl);
                         } else {
-                            const links = imageAttachments.map((att, index) => `> [Image ${index + 1}](${searchUrl}/search.php?url=${encodeURIComponent(att.url)})`).join("\n");
+                            const links = imageAttachments.map((att, index) => `> [Image ${index + 1}](${selectedSearchUrl}/search.php?url=${encodeURIComponent(att.url)})`).join("\n");
                             t.FluxDispatcher.dispatch({
                                 type: "MESSAGE_UPDATE",
                                 message: { ...message, content: links, guild_id: V.getChannel(message.channel_id).guild_id },
