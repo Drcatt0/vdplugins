@@ -10,9 +10,9 @@ const EMBED_COLOR = () =>
 
 const authorMods = {
     author: {
-        username: "GotFeetBot",
+        username: "HelloBot",
         avatar: "command",
-        avatarURL: "https://example.com/your-bot-avatar.png" // Replace with the bot avatar URL
+        avatarURL: "https://example.com/your-bot-avatar.png" // Replace with the bot avatar URL if you have one
     },
 };
 
@@ -32,74 +32,43 @@ export default {
     },
     onLoad() {
         const command = registerCommand({
-            name: "gotfeet",
-            displayName: "gotfeet",
-            description: "Fetches a random post from selected subreddits.",
-            displayDescription: "Fetches a random post from selected subreddits.",
+            name: "hello",
+            displayName: "hello",
+            description: "Sends a Hello World message in an embed.",
+            displayDescription: "Sends a Hello World message in an embed.",
             type: 1,
             inputType: 1,
             applicationId: "-1",
             options: [],
-            async execute(_, ctx) {
+            execute(_, ctx) {
                 try {
-                    const subreddits = ["feet", "feetishh", "feetinyourface", "feetqueens", "feettoesandsocks"];
-                    const subreddit = subreddits[Math.floor(Math.random() * subreddits.length)];
-                    
-                    // Fetch posts from Reddit
-                    const response = await fetch(`https://www.reddit.com/r/${subreddit}/top.json?limit=10`);
-                    const data = await response.json();
-                    const posts = data.data.children;
-                    const imagePosts = posts.filter(post => post.data.post_hint === "image");
+                    const embed = {
+                        color: EMBED_COLOR(),
+                        type: "rich",
+                        title: "Hello World",
+                        description: "This is a test message to confirm the embed functionality.",
+                    };
 
-                    if (imagePosts.length > 0) {
-                        const randomPost = imagePosts[Math.floor(Math.random() * imagePosts.length)];
-
-                        const embed = {
-                            color: EMBED_COLOR(),
-                            type: "rich",
-                            title: randomPost.data.title,
-                            url: `https://reddit.com${randomPost.data.permalink}`,
-                            image: { url: randomPost.data.url },
-                            fields: [
-                                {
-                                    name: "Subreddit",
-                                    value: `r/${subreddit}`,
-                                    inline: true,
-                                },
-                                {
-                                    name: "Author",
-                                    value: `u/${randomPost.data.author}`,
-                                    inline: true,
-                                },
-                            ],
-                        };
-
-                        // Send the embed message with author modifications
-                        sendMessage(
-                            {
-                                loggingName: "GotFeetBot output message",
-                                channelId: ctx.channel.id,
-                                embeds: [embed],
-                            },
-                            {
-                                ...authorMods,
-                                interaction: {
-                                    name: "/gotfeet",
-                                    user: findByStoreName("UserStore").getCurrentUser(),
-                                },
-                            }
-                        );
-                    } else {
-                        sendMessage({
+                    // Send the embed message with author modifications
+                    sendMessage(
+                        {
+                            loggingName: "HelloBot output message",
                             channelId: ctx.channel.id,
-                            content: `No images found in r/${subreddit}.`,
-                        });
-                    }
-                } catch (error) {
-                    console.error("Error fetching image:", error);
+                            embeds: [embed],
+                        },
+                        {
+                            ...authorMods,
+                            interaction: {
+                                name: "/hello",
+                                user: findByStoreName("UserStore").getCurrentUser(),
+                            },
+                        }
+                    );
+                } catch (e) {
+                    console.error("Error sending Hello World embed:", e);
                     sendMessage({
                         channelId: ctx.channel.id,
-                        content: "Failed to retrieve image.",
+                        content: "Failed to send Hello World message.",
                     });
                 }
             },
