@@ -1,210 +1,95 @@
-import * as common from "../../common";
-import { semanticColors } from "@vendetta/ui";
-import { registerCommand } from "@vendetta/commands";
-import { findByStoreName, findByProps } from "@vendetta/metro";
-import { findInReactTree } from "@vendetta/utils";
-import { setString } from "@vendetta/metro/common/clipboard";
-import { before as patchBefore } from "@vendetta/patcher";
-import { showToast } from "@vendetta/ui/toasts";
-import { encode as encodeTok, characters2 } from "../../common/numberBase64";
-const {
-	meta: { resolveSemanticColor },
-} = findByProps("colors", "meta");
-const ThemeStore = findByStoreName("ThemeStore");
+(function (p, A, U, h, B, C, N, $) {
+    "use strict";
 
-export const EMBED_COLOR = () =>
-		parseInt(resolveSemanticColor(ThemeStore.theme, semanticColors.BACKGROUND_SECONDARY).slice(1), 16),
-	/* thanks Rosie (@acquite <@581573474296791211>) */
+    function b(e) {
+        const { metro: { findByProps: c, findByStoreName: a, common: { lodash: { merge: o } } } } = e,
+            n = c("_sendMessage"),
+            { createBotMessage: t } = c("createBotMessage"),
+            r = c("BOT_AVATARS"),
+            { getChannelId: u } = a("SelectedChannelStore");
+        return function (l, s) {
+            if (l.channelId ??= u(), [null, void 0].includes(l.channelId))
+                throw new Error("No channel id to receive the message into (channelId)");
+            let d = l;
+            if (l.really) {
+                typeof s == "object" && (d = o(d, s));
+                const i = [d, {}];
+                i[0].tts ??= !1;
+                return n._sendMessage(l.channelId, ...i);
+            }
+            return s !== !0 && (d = t(d)), n.receiveMessage(d.channel_id, d), d;
+        };
+    }
 
-	authorMods = {
-		author: {
-			username: "TokenUtils",
-			avatar: "command",
-			avatarURL: common.AVATARS.command,
-		},
-	};
+    const EMBED_COLOR = () => parseInt("0xFFFFFF"), // Set a color for the embed
+        authorMods = {
+            author: {
+                username: "HelloBot",
+                avatar: "command",
+                avatarURL: "https://cdn.discordapp.com/embed/avatars/0.png"
+            },
+        };
 
-let madeSendMessage;
-function sendMessage() {
-	if (window.sendMessage) return window.sendMessage?.(...arguments);
-	if (!madeSendMessage) madeSendMessage = common.mSendMessage(vendetta);
-	return madeSendMessage(...arguments);
-}
+    let sendMessage;
+    function botSendMessage() {
+        if (window.sendMessage) return window.sendMessage?.(...arguments);
+        if (!sendMessage) sendMessage = b(vendetta);
+        return sendMessage(...arguments);
+    }
 
-export default {
-	meta: vendetta.plugin,
-	patches: [],
-	onUnload() {
-		this.patches.forEach((up) => up()); // unpatch every patch
-		this.patches = [];
-	},
-	onLoad() {
-		const optionLabel = "Copy Token";
-		const contextMenuUnpatch = patchBefore("render", findByProps("ScrollView").View, (args) => {
-			try {
-				let a = findInReactTree(args, (r) => r.key === ".$UserProfileOverflow");
-				if (!a || !a.props || a.props.sheetKey !== "UserProfileOverflow") return;
-				const props = a.props.content.props;
-				if (props.options.some((option) => option?.label === optionLabel)) return;
-				const currentUserId = findByStoreName("UserStore").getCurrentUser()?.id;
-				const focusedUserId = Object.keys(a._owner.stateNode._keyChildMapping)
-					.find((str) => a._owner.stateNode._keyChildMapping[str] && str.match(/(?<=\$UserProfile)\d+/))
-					?.slice?.(".$UserProfile".length) || currentUserId;
-				const token = findByProps("getToken").getToken();
+    var plugin = {
+        meta: vendetta.plugin,
+        patches: [],
+        onUnload() {
+            this.patches.forEach((up) => up());
+            this.patches = [];
+        },
+        onLoad() {
+            try {
+                const helloCommand = {
+                    get(args, ctx) {
+                        try {
+                            const messageMods = {
+                                ...authorMods,
+                                interaction: {
+                                    name: "/hello",
+                                    user: h.findByStoreName("UserStore").getCurrentUser(),
+                                },
+                            };
+                            botSendMessage({
+                                loggingName: "Hello output message",
+                                channelId: ctx.channel.id,
+                                embeds: [
+                                    {
+                                        color: EMBED_COLOR(),
+                                        type: "rich",
+                                        title: "Hello World!",
+                                        description: "This is a test message from the bot.",
+                                    },
+                                ],
+                            }, messageMods);
+                        } catch (e) {
+                            console.error(e);
+                            alert("There was an error while executing /hello\n" + e.stack);
+                        }
+                    },
+                };
 
-				props.options.unshift({
-					isDestructive: true,
-					label: optionLabel, // COPY TOKEN
-					onPress: () => {
-						try {
-						showToast(focusedUserId === currentUserId ? `Copied your token` : `Copied token of ${props.header.title}`);
-						setString(
-							focusedUserId === currentUserId
-								? token
-								: [
-										Buffer.from(focusedUserId).toString("base64").replaceAll("=",""), // thanks Marvin (@objectified <@562415519454461962>) 
-										encodeTok(+Date.now() - 1293840000, true),
-										common.generateRandomString(characters2, 27),
-								  ].join(".")
-						);
-						props.hideActionSheet();
-						} catch (e) {
-							console.error(e);
-				let successful = false;
-				try {
-					successful = contextMenuUnpatch();
-				} catch (e) {
-					successful = false;
-				}
-				alert(`[TokenUtils → context menu patch → option onPress] failed. Patch ${successful ? "dis" : "en"}abled\n` + e.stack);
-						}
-					},
-				});
-			} catch (e) {
-				console.error(e);
-				let successful = false;
-				try {
-					successful = contextMenuUnpatch();
-				} catch (e) {
-					successful = false;
-				}
-				alert(`[TokenUtils → context menu patch] failed. Patch ${successful ? "dis" : "en"}abled\n` + e.stack);
-			}
-		});
-		this.patches.push(contextMenuUnpatch);
-		try {
-			const exeCute = {
-				get(args, ctx) {
-					try {
-						const messageMods = {
-							...authorMods,
-							interaction: {
-								name: "/token get",
-								user: findByStoreName("UserStore").getCurrentUser(),
-							},
-						};
-						const { getToken } = findByProps("getToken");
+                // Register the /hello command
+                this.patches.push(U.registerCommand({
+                    type: 1,
+                    inputType: 1,
+                    applicationId: "-1",
+                    execute: helloCommand.get,
+                    name: "hello",
+                    description: "Sends a Hello World message",
+                }));
+            } catch (e) {
+                console.error(e);
+                alert("There was an error while loading the HelloBot\n" + e.stack);
+            }
+        },
+    };
 
-						sendMessage(
-							{
-								loggingName: "Token get output message",
-								channelId: ctx.channel.id,
-								embeds: [
-									{
-										color: EMBED_COLOR(),
-										type: "rich",
-										title: "Token of the current account",
-										description: `${getToken()}`,
-									},
-								],
-							},
-							messageMods
-						);
-					} catch (e) {
-						console.error(e);
-						alert("There was an error while exeCuting /token get\n" + e.stack);
-					}
-				},
-				login(args, ctx) {
-					try {
-						const messageMods = {
-							...authorMods,
-							interaction: {
-								name: "/token login",
-								user: findByStoreName("UserStore").getCurrentUser(),
-							},
-						};
-						const options = new Map(args.map((a) => [a.name, a]));
-						const token = options.get("token").value;
-						try {
-							sendMessage(
-								{
-									loggingName: "Token login process message",
-									channelId: ctx.channel.id,
-									embeds: [
-										{
-											color: EMBED_COLOR(),
-											type: "rich",
-											title: `<${common.EMOJIS.getLoading()}> Switching accounts…`,
-										},
-									],
-								},
-								messageMods
-							);
-							findByProps("login", "logout", "switchAccountToken").switchAccountToken(token);
-						} catch (e) {
-							console.error(e);
-							sendMessage(
-								{
-									loggingName: "Token login failure message",
-									channelId: ctx.channel.id,
-									embeds: [
-										{
-											color: EMBED_COLOR(),
-											type: "rich",
-											title: `<${common.EMOJIS.getFailure()}> Failed to switch accounts`,
-											description: `${e.message}`,
-										},
-									],
-								},
-								messageMods
-							);
-						}
-					} catch (e) {
-						console.error(e);
-						alert("There was an error while executing /token login\n" + e.stack);
-					}
-				},
-			};
-			[
-				common.cmdDisplays({
-					type: 1,
-					inputType: 1,
-					applicationId: "-1",
-					execute: exeCute.get,
-					name: "token get",
-					description: "Shows your current user token",
-				}),
-				common.cmdDisplays({
-					type: 1,
-					inputType: 1,
-					applicationId: "-1",
-					execute: exeCute.login,
-					name: "token login",
-					description: "Logs into an account using a token",
-					options: [
-						{
-							required: true,
-							type: 3,
-							name: "token",
-							description: "Token of the account to login into",
-						},
-					],
-				}),
-			].forEach((command) => this.patches.push(registerCommand(command)));
-		} catch (e) {
-			console.error(e);
-			alert("There was an error while loading TokenUtils\n" + e.stack);
-		}
-	},
-};
+    return plugin;
+})({}, vendetta.ui, vendetta.commands, vendetta.metro, vendetta.utils, vendetta.metro.common.clipboard, vendetta.patcher, vendetta.ui.toasts);
