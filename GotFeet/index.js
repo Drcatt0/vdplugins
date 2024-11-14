@@ -1,50 +1,55 @@
-(function(f, $, h, B) {
+(function(p, A, U, h, B, C, N, $) {
     "use strict";
-    var N;
-    (function(e) {
-        e[e.BUILT_IN = 0] = "BUILT_IN";
-        e[e.BUILT_IN_TEXT = 1] = "BUILT_IN_TEXT";
-        e[e.BUILT_IN_INTEGRATION = 2] = "BUILT_IN_INTEGRATION";
-        e[e.BOT = 3] = "BOT";
-        e[e.PLACEHOLDER = 4] = "PLACEHOLDER";
-    })(N || (N = {}));
 
-    var c;
-    (function(e) {
-        e[e.SUB_COMMAND = 1] = "SUB_COMMAND";
-        e[e.SUB_COMMAND_GROUP = 2] = "SUB_COMMAND_GROUP";
-        e[e.STRING = 3] = "STRING";
-        e[e.INTEGER = 4] = "INTEGER";
-        e[e.BOOLEAN = 5] = "BOOLEAN";
-        e[e.USER = 6] = "USER";
-        e[e.CHANNEL = 7] = "CHANNEL";
-        e[e.ROLE = 8] = "ROLE";
-        e[e.MENTIONABLE = 9] = "MENTIONABLE";
-        e[e.NUMBER = 10] = "NUMBER";
-        e[e.ATTACHMENT = 11] = "ATTACHMENT";
-    })(c || (c = {}));
-
-    var g;
-    (function(e) {
-        e[e.CHAT = 1] = "CHAT";
-        e[e.USER = 2] = "USER";
-        e[e.MESSAGE = 3] = "MESSAGE";
-    })(g || (g = {}));
+    function b(e) {
+        const { metro: { findByProps: c, findByStoreName: a, common: { lodash: { merge: o } } } } = e,
+            n = c("_sendMessage"),
+            { createBotMessage: t } = c("createBotMessage"),
+            r = c("BOT_AVATARS"),
+            { getChannelId: u } = a("SelectedChannelStore");
+        return function(l, s) {
+            if (l.channelId ??= u(), [null, void 0].includes(l.channelId)) throw new Error("No channel id to receive the message into (channelId)");
+            let d = l;
+            if (l.really) {
+                typeof s == "object" && (d = o(d, s));
+                const i = [d, {}];
+                i[0].tts ??= !1;
+                for (const m of ["allowedMentions", "messageReference"]) m in i[0] && (i[1][m] = i[0][m], delete i[0][m]);
+                const k = "overwriteSendMessageArg2";
+                return k in i[0] && (i[1] = i[0][k], delete i[0][k]), n._sendMessage(l.channelId, ...i);
+            }
+            return s !== !0 && (d = t(d)), typeof s == "object" && (d = o(d, s), typeof s.author == "object" && function() {
+                const i = s.author;
+                typeof i.avatarURL == "string" && (r.BOT_AVATARS[i.avatar ?? i.avatarURL] = i.avatarURL, i.avatar ??= i.avatarURL, delete i.avatarURL);
+            }()), n.receiveMessage(d.channel_id, d), d;
+        };
+    }
 
     const { sendBotMessage: _ } = h.findByProps("sendBotMessage");
-    let A = [];
-    
+    const EMBED_COLOR = () => parseInt("FF4500", 16); // Reddit-themed orange
+    const authorMods = {
+        author: {
+            username: "RedditFetcher",
+            avatar: "command",
+            avatarURL: "https://www.redditstatic.com/desktop2x/img/favicon/favicon-32x32.png",
+        },
+    };
+
+    let y;
+    function sendMessage() {
+        return window.sendMessage ? window.sendMessage?.(...arguments) : (y || (y = b(vendetta)), y(...arguments));
+    }
+
     const L = function() {
-        A.push($.registerCommand({
+        $.registerCommand({
             name: "gotfeet",
             displayName: "gotfeet",
             description: "Fetches a random post from selected subreddits.",
             displayDescription: "Fetches a random post from selected subreddits.",
-            type: g.CHAT,
-            inputType: N.BUILT_IN_TEXT,
+            type: 1,
+            inputType: 1,
             applicationId: "-1",
-            options: [],
-            async execute() {
+            async execute(args, ctx) {
                 try {
                     const subreddits = ["feet", "feetishh", "feetinyourface", "feetqueens", "feettoesandsocks"];
                     const subreddit = subreddits[Math.floor(Math.random() * subreddits.length)];
@@ -57,30 +62,27 @@
                         const randomPost = imagePosts[Math.floor(Math.random() * imagePosts.length)];
                         const { title, url, author } = randomPost.data;
 
-                        // Return an embed message
-                        return {
+                        sendMessage({
+                            loggingName: "RedditFetcher",
+                            channelId: ctx.channel.id,
                             embeds: [{
-                                color: 0xFF4500, // Reddit-themed orange
+                                color: EMBED_COLOR(),
                                 type: "rich",
                                 title: title || "Random post from r/" + subreddit,
                                 url: `https://reddit.com${randomPost.data.permalink}`,
                                 description: `From [r/${subreddit}](https://reddit.com/r/${subreddit}) by u/${author}`,
-                                image: {
-                                    url: url
-                                }
+                                image: { url: url }
                             }]
-                        };
+                        }, authorMods);
                     } else {
-                        return {
-                            content: `No images found in r/${subreddit}.`
-                        };
+                        sendMessage({ content: `No images found in r/${subreddit}.` });
                     }
                 } catch (error) {
                     console.error("Error fetching image:", error);
-                    return { content: "Failed to retrieve image." };
+                    sendMessage({ content: "Failed to retrieve image." });
                 }
             }
-        }));
+        });
     };
 
     const O = function() {
