@@ -4,17 +4,23 @@ import { registerCommand } from "@vendetta/commands";
 import { findByStoreName, findByProps } from "@vendetta/metro";
 
 const ThemeStore = findByStoreName("ThemeStore");
-const EMBED_COLOR = () =>
-    parseInt(findByProps("colors", "meta").meta.resolveSemanticColor(ThemeStore.theme, semanticColors.BACKGROUND_SECONDARY).slice(1), 16);
+
+// Setting the color for the embed to match the theme
+export const EMBED_COLOR = () =>
+    parseInt(
+        findByProps("colors", "meta").meta.resolveSemanticColor(ThemeStore.theme, semanticColors.BACKGROUND_SECONDARY).slice(1),
+        16
+    );
 
 const authorMods = {
     author: {
         username: "HelloBot",
         avatar: "command",
-        avatarURL: common.AVATARS.command, // Replace this with a specific avatar URL if desired
+        avatarURL: common.AVATARS.command, // Replace with specific avatar URL if needed
     },
 };
 
+// Helper function to send a message, mimicking TokenUtils style
 let madeSendMessage;
 function sendMessage() {
     if (!madeSendMessage) madeSendMessage = common.mSendMessage(vendetta);
@@ -25,14 +31,16 @@ export default {
     meta: vendetta.plugin,
     patches: [],
     onUnload() {
-        this.patches.forEach((up) => up()); // Unpatch all patches
+        // Unpatch all when the plugin is unloaded
+        this.patches.forEach((up) => up());
         this.patches = [];
     },
     onLoad() {
         try {
-            const exeCute = {
-                hello(args, ctx) {
+            const helloCommand = {
+                execute(args, ctx) {
                     try {
+                        // Setting up the message modifications (author and interaction)
                         const messageMods = {
                             ...authorMods,
                             interaction: {
@@ -41,6 +49,7 @@ export default {
                             },
                         };
 
+                        // Sending an embed with "Hello World" content
                         sendMessage(
                             {
                                 loggingName: "HelloBot output message",
@@ -56,26 +65,25 @@ export default {
                             },
                             messageMods
                         );
-                    } catch (e) {
-                        console.error("Error sending Hello World embed:", e);
-                        alert("There was an error while executing /hello\n" + e.stack);
+                    } catch (error) {
+                        console.error("Error executing /hello command:", error);
                     }
                 },
             };
 
-            const helloCommand = registerCommand({
+            const commandRegistration = registerCommand({
+                name: "hello",
+                displayName: "hello",
+                description: "Sends a Hello World message in an embed",
                 type: 1,
                 inputType: 1,
                 applicationId: "-1",
-                execute: exeCute.hello,
-                name: "hello",
-                description: "Sends a Hello World message in an embed",
+                execute: helloCommand.execute,
             });
 
-            this.patches.push(helloCommand);
-        } catch (e) {
-            console.error("Error loading HelloBot:", e);
-            alert("There was an error while loading HelloBot\n" + e.stack);
+            this.patches.push(commandRegistration);
+        } catch (error) {
+            console.error("Error loading HelloBot:", error);
         }
     },
 };
