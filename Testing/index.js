@@ -25,44 +25,51 @@
     const z = t.stylesheet.createThemedStyleSheet({
         iconComponent: { width: 24, height: 24, tintColor: C.semanticColors.INTERACTIVE_NORMAL }
     });
-    let T = [];
 
-    function K() {
+    function addReverseImageSearchButton() {
         return B.before("openLazy", M, function(e) {
             let [a, i, s] = e;
             const n = s?.message;
-            i !== "MessageLongPressActionSheet" || !n || a.then(function(A) {
-                const ae = B.after("default", A, function(ue, ie) {
-                    t.React.useEffect(function() {
-                        return function() { ae(); };
-                    }, []);
-                    const v = F.findInReactTree(ie, function(r) {
-                        var l, h;
-                        return (r == null || (h = r[0]) === null || h === void 0 || (l = h.type) === null || l === void 0 ? void 0 : l.name) === "ButtonRow";
-                    });
-                    if (!v) return;
-                    const re = Math.max(v.findIndex(function(r) { return r.props.message === t.i18n.Messages.MARK_UNREAD; }), 0);
-                    const u = j.getMessage(n.channel_id, n.id);
-                    const imageAttachments = u?.attachments?.filter(att => att.content_type?.startsWith("image"));
+
+            // Ensure this is the long-press action sheet and there is a message
+            if (i !== "MessageLongPressActionSheet" || !n) return;
+
+            a.then(function(A) {
+                const afterDefault = B.after("default", A, function(actionSheet) {
+                    t.React.useEffect(() => () => afterDefault(), []);
+                    const buttonRow = F.findInReactTree(actionSheet, r => r?.[0]?.type?.name === "ButtonRow");
+
+                    if (!buttonRow) return;
+
+                    const re = Math.max(buttonRow.findIndex(r => r.props.message === t.i18n.Messages.MARK_UNREAD), 0);
+                    const message = j.getMessage(n.channel_id, n.id);
+                    const imageAttachments = message?.attachments?.filter(att => att.content_type?.startsWith("image"));
+
                     if (!imageAttachments || imageAttachments.length === 0) return;
-                    const S = u?.id ?? n.id, se = u?.content ?? n.content;
-                    const I = T.find(function(r) { return Object.keys(r)[0] === S; }, "cache object");
-                    const _ = "Reverse Image Search", icon = c.getAssetIDByName("ic_search");
-                    const oe = function() {
-                        const searchUrl = selectedSearchUrl; // Use selected search engine URL
+
+                    const searchLabel = "Reverse Image Search";
+                    const icon = c.getAssetIDByName("ic_search");
+
+                    const onPress = () => {
+                        const searchUrl = selectedSearchUrl;
                         if (imageAttachments.length === 1) {
                             const searchEngineUrl = `${searchUrl}/search.php?url=${encodeURIComponent(imageAttachments[0].url)}`;
                             t.url.openURL(searchEngineUrl);
                         } else {
                             const links = imageAttachments.map((att, index) => `> [Image ${index + 1}](${searchUrl}/search.php?url=${encodeURIComponent(att.url)})`).join("\n");
-                            t.FluxDispatcher.dispatch({ type: "MESSAGE_UPDATE", message: { ...u, content: links, guild_id: V.getChannel(u.channel_id).guild_id }, log_edit: !1 });
+                            t.FluxDispatcher.dispatch({
+                                type: "MESSAGE_UPDATE",
+                                message: { ...message, content: links, guild_id: V.getChannel(message.channel_id).guild_id },
+                                log_edit: !1
+                            });
                         }
                         M.hideActionSheet();
                     };
-                    v.splice(re, 0, t.React.createElement(P, {
-                        label: _,
-                        icon: t.React.createElement(P.Icon, { source: icon, IconComponent: function() { return t.React.createElement(t.ReactNative.Image, { resizeMode: "cover", style: z.iconComponent, source: icon }); } }),
-                        onPress: oe
+
+                    buttonRow.splice(re, 0, t.React.createElement(P, {
+                        label: searchLabel,
+                        icon: t.React.createElement(P.Icon, { source: icon, IconComponent: () => t.React.createElement(t.ReactNative.Image, { resizeMode: "cover", style: z.iconComponent, source: icon }) }),
+                        onPress
                     }));
                 });
             });
@@ -124,7 +131,7 @@
     // Plugin load/unload functions
     let b = [];
     var ne = {
-        onLoad: function() { return b = [K()]; },
+        onLoad: function() { return b = [addReverseImageSearchButton()]; },
         onUnload: function() { for (const e of b) e(); },
         settings: SettingsPage
     };
