@@ -40,7 +40,7 @@
 
                     if (!imageAttachments || imageAttachments.length === 0) return;
 
-                    const searchLabel = "Reverse Image Search";
+                    const searchLabel = "SauceNAO";
                     const icon = c.getAssetIDByName("ic_search");
 
                     const onPress = () => {
