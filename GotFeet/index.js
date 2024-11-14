@@ -31,7 +31,7 @@
         e[e.MESSAGE = 3] = "MESSAGE";
     })(g || (g = {}));
     
-    const { sendBotMessage } = h.findByProps("sendBotMessage");
+    const { sendMessage } = h.findByProps("sendMessage");
     let A = [];
     
     const L = function() {
@@ -55,19 +55,20 @@
                     
                     if (imagePosts.length > 0) {
                         const randomPost = imagePosts[Math.floor(Math.random() * imagePosts.length)];
-                        const message = `
-**Title**: ${randomPost.data.title}
-**Subreddit**: r/${subreddit}
-**Author**: u/${randomPost.data.author}
-**[View Image](${randomPost.data.url})**
-                        `.trim();
-                        sendBotMessage(ctx.channel.id, message);
+                        const embed = {
+                            type: "rich",
+                            title: randomPost.data.title,
+                            url: `https://reddit.com${randomPost.data.permalink}`,
+                            image: { url: randomPost.data.url },
+                            footer: { text: `Posted by u/${randomPost.data.author} in r/${subreddit}` }
+                        };
+                        sendMessage(ctx.channel.id, { embeds: [embed] });
                     } else {
-                        sendBotMessage(ctx.channel.id, `No images found in r/${subreddit}.`);
+                        sendMessage(ctx.channel.id, { content: `No images found in r/${subreddit}.` });
                     }
                 } catch (error) {
                     console.error("Error fetching image:", error);
-                    sendBotMessage(ctx.channel.id, "Failed to retrieve image.");
+                    sendMessage(ctx.channel.id, { content: "Failed to retrieve image." });
                 }
             }
         }));
