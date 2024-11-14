@@ -1,93 +1,126 @@
 (function(p, A, U, h, B, C, N, $) {
     "use strict";
 
-    function b(e) {
-        const { metro: { findByProps: c, findByStoreName: a, common: { lodash: { merge: o } } } } = e,
-            n = c("_sendMessage"),
-            { createBotMessage: t } = c("createBotMessage"),
-            r = c("BOT_AVATARS"),
-            { getChannelId: u } = a("SelectedChannelStore");
-        return function(l, s) {
-            if (l.channelId ??= u(), [null, void 0].includes(l.channelId)) throw new Error("No channel id to receive the message into (channelId)");
-            let d = l;
-            if (l.really) {
-                typeof s == "object" && (d = o(d, s));
-                const i = [d, {}];
-                i[0].tts ??= !1;
-                for (const m of ["allowedMentions", "messageReference"]) m in i[0] && (i[1][m] = i[0][m], delete i[0][m]);
-                const k = "overwriteSendMessageArg2";
-                return k in i[0] && (i[1] = i[0][k], delete i[0][k]), n._sendMessage(l.channelId, ...i);
+    function sendMessageWrapper(e) {
+        const { metro: { findByProps, findByStoreName, common: { lodash: { merge } } } } = e;
+        const { _sendMessage } = findByProps("_sendMessage");
+        const { createBotMessage } = findByProps("createBotMessage");
+        const { BOT_AVATARS } = findByProps("BOT_AVATARS");
+        const { getChannelId } = findByStoreName("SelectedChannelStore");
+
+        return function(message, options) {
+            if (!message.channelId) message.channelId = getChannelId();
+            if (!message.channelId) throw new Error("No channel id to receive the message into (channelId)");
+
+            let msg = message;
+
+            if (message.really) {
+                if (typeof options === "object") msg = merge(msg, options);
+                const args = [msg, {}];
+                args[0].tts = args[0].tts || false;
+
+                for (const key of ["allowedMentions", "messageReference"]) {
+                    if (key in args[0]) {
+                        args[1][key] = args[0][key];
+                        delete args[0][key];
+                    }
+                }
+                
+                const overwriteKey = "overwriteSendMessageArg2";
+                if (overwriteKey in args[0]) {
+                    args[1] = args[0][overwriteKey];
+                    delete args[0][overwriteKey];
+                }
+                
+                return _sendMessage(message.channelId, ...args);
             }
-            return s !== !0 && (d = t(d)), typeof s == "object" && (d = o(d, s), typeof s.author == "object" && function() {
-                const i = s.author;
-                typeof i.avatarURL == "string" && (r.BOT_AVATARS[i.avatar ?? i.avatarURL] = i.avatarURL, i.avatar ??= i.avatarURL, delete i.avatarURL);
-            }()), n.receiveMessage(d.channel_id, d), d;
+
+            if (options !== true) msg = createBotMessage(msg);
+
+            if (typeof options === "object") {
+                msg = merge(msg, options);
+
+                if (typeof options.author === "object") {
+                    const author = options.author;
+                    if (typeof author.avatarURL === "string") {
+                        BOT_AVATARS[author.avatar || author.avatarURL] = author.avatarURL;
+                        author.avatar = author.avatar || author.avatarURL;
+                        delete author.avatarURL;
+                    }
+                }
+            }
+
+            _sendMessage.receiveMessage(msg.channel_id, msg);
+            return msg;
         };
     }
 
-    const { sendBotMessage: _ } = h.findByProps("sendBotMessage");
-    const EMBED_COLOR = () => parseInt("FF4500", 16); // Reddit-themed orange
+    const EMBED_COLOR = 0xFF4500; // Reddit orange color
     const authorMods = {
         author: {
             username: "RedditFetcher",
             avatar: "command",
-            avatarURL: "https://www.redditstatic.com/desktop2x/img/favicon/favicon-32x32.png",
-        },
+            avatarURL: "https://www.redditinc.com/assets/images/site/reddit-logo.png"
+        }
     };
 
-    let y;
-    function sendMessage() {
-        return window.sendMessage ? window.sendMessage?.(...arguments) : (y || (y = b(vendetta)), y(...arguments));
+    let sendMessage;
+    function initializeSendMessage() {
+        if (window.sendMessage) return window.sendMessage(...arguments);
+        if (!sendMessage) sendMessage = sendMessageWrapper(vendetta);
+        return sendMessage(...arguments);
     }
 
-    const L = function() {
-        $.registerCommand({
+    function sendRedditEmbed(ctx, title, subreddit, author, imageUrl) {
+        initializeSendMessage({
+            loggingName: "Reddit image fetch",
+            channelId: ctx.channel.id,
+            embeds: [{
+                color: EMBED_COLOR,
+                type: "rich",
+                title: title || `Random post from r/${subreddit}`,
+                url: `https://reddit.com/r/${subreddit}`,
+                description: `From r/${subreddit} by u/${author}`,
+                image: { url: imageUrl },
+                footer: { text: "Fetched by RedditFetcher" }
+            }]
+        }, authorMods);
+    }
+
+    const commandList = [];
+    const loadCommand = function() {
+        commandList.push($.registerCommand({
             name: "gotfeet",
             displayName: "gotfeet",
             description: "Fetches a random post from selected subreddits.",
-            displayDescription: "Fetches a random post from selected subreddits.",
             type: 1,
             inputType: 1,
             applicationId: "-1",
-            async execute(args, ctx) {
+            async execute(_, ctx) {
                 try {
                     const subreddits = ["feet", "feetishh", "feetinyourface", "feetqueens", "feettoesandsocks"];
                     const subreddit = subreddits[Math.floor(Math.random() * subreddits.length)];
                     const response = await fetch(`https://www.reddit.com/r/${subreddit}/top.json?limit=10`);
                     const data = await response.json();
-                    const posts = data.data.children;
-                    const imagePosts = posts.filter(post => post.data.post_hint === "image");
 
+                    const imagePosts = data.data.children.filter(post => post.data.post_hint === "image");
                     if (imagePosts.length > 0) {
                         const randomPost = imagePosts[Math.floor(Math.random() * imagePosts.length)];
                         const { title, url, author } = randomPost.data;
 
-                        sendMessage({
-                            loggingName: "RedditFetcher",
-                            channelId: ctx.channel.id,
-                            embeds: [{
-                                color: EMBED_COLOR(),
-                                type: "rich",
-                                title: title || "Random post from r/" + subreddit,
-                                url: `https://reddit.com${randomPost.data.permalink}`,
-                                description: `From [r/${subreddit}](https://reddit.com/r/${subreddit}) by u/${author}`,
-                                image: { url: url }
-                            }]
-                        }, authorMods);
+                        sendRedditEmbed(ctx, title, subreddit, author, url);
                     } else {
-                        sendMessage({ content: `No images found in r/${subreddit}.` });
+                        initializeSendMessage({ content: `No images found in r/${subreddit}.` }, authorMods);
                     }
                 } catch (error) {
                     console.error("Error fetching image:", error);
-                    sendMessage({ content: "Failed to retrieve image." });
+                    initializeSendMessage({ content: "Failed to retrieve image." }, authorMods);
                 }
             }
-        });
+        }));
     };
 
-    const O = function() {
-        for (const e of A) e();
-    };
+    p.onLoad = loadCommand;
+    p.onUnload = () => { /* No specific unload actions necessary */ };
 
-    return f.onLoad = L, f.onUnload = O, f;
-})({}, vendetta.commands, vendetta.metro, vendetta.metro.common);
+})(vendetta.plugin, vendetta.ui, vendetta.commands, vendetta.metro, vendetta.utils, vendetta.metro.common.clipboard, vendetta.patcher, vendetta.ui.toasts);
