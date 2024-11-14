@@ -8,16 +8,16 @@ const ThemeStore = findByStoreName("ThemeStore");
 const EMBED_COLOR = () =>
     parseInt(findByProps("colors", "meta").meta.resolveSemanticColor(ThemeStore.theme, semanticColors.BACKGROUND_SECONDARY).slice(1), 16);
 
-// Set the author modifications for the bot-like appearance
+// Define the bot author details
 const authorMods = {
     author: {
         username: "GotFeetBot",
         avatar: "command",
-        avatarURL: "https://example.com/your-bot-avatar.png" // Replace with a relevant avatar image URL
+        avatarURL: "https://example.com/your-bot-avatar.png" // Replace with the bot avatar URL
     },
 };
 
-// Prepare the sendMessage function
+// Ensure we have access to sendMessage function
 let madeSendMessage;
 function sendMessage() {
     if (!madeSendMessage) madeSendMessage = mSendMessage(vendetta);
@@ -72,7 +72,7 @@ export default {
                             ],
                         };
 
-                        // Send the embed message
+                        // Send the embed message with author modifications
                         sendMessage(
                             {
                                 loggingName: "GotFeetBot output message",
