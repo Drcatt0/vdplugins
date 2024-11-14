@@ -1,7 +1,7 @@
 (function(f, L, g, t, B, C, c, d, F, D, G, k, O, E) {
     "use strict";
 
-    // Reverse Image Search Engines
+    // Search Engines for Configuration Menu
     const searchEngines = {
         "SauceNAO": "https://saucenao.com",
         "Google": "https://images.google.com",
@@ -14,7 +14,7 @@
     // Settings storage (default to SauceNAO if no engine is selected)
     O.selectedEngineURL ??= "https://saucenao.com";
 
-    // Search Engine Settings Page
+    // Search Engine Settings Page (Configuration Menu)
     function SearchEngineSettingsPage() {
         const ScrollView = t.ReactNative.ScrollView ?? t.ReactNative.View;
         const FormRow = d.Forms?.FormRow ?? t.ReactNative.Text;
@@ -66,8 +66,8 @@
         );
     }
 
-    // Main functionality (integrated with selected search engine)
-    const H = O.selectedEngineURL; // Use the selected engine URL for translation
+    // Main plugin functionality
+    const H = O.selectedEngineURL;
 
     var w = {
         translate: async function(e) {
@@ -89,65 +89,9 @@
         }
     };
 
-    const M = g.findByProps("openLazy", "hideActionSheet"),
-          P = ((y = g.findByProps("ActionSheetRow")) === null || y === void 0 ? void 0 : y.ActionSheetRow) ?? d.Forms.FormRow,
-          j = g.findByStoreName("MessageStore"),
-          V = g.findByStoreName("ChannelStore"),
-          z = t.stylesheet.createThemedStyleSheet({ iconComponent: { width: 24, height: 24, tintColor: C.semanticColors.INTERACTIVE_NORMAL } });
-
-    let T = [];
-
-    function K() {
-        return B.before("openLazy", M, function(e) {
-            let [a, i, s] = e;
-            const n = s?.message;
-            i !== "MessageLongPressActionSheet" || !n || a.then(function(A) {
-                const ae = B.after("default", A, function(ue, ie) {
-                    t.React.useEffect(function() { return function() { ae() } }, []);
-                    const v = F.findInReactTree(ie, function(r) {
-                        var l, h;
-                        return (r == null || (h = r[0]) === null || h === void 0 || (l = h.type) === null || l === void 0 ? void 0 : l.name) === "ButtonRow";
-                    });
-                    if (!v) return;
-                    const re = Math.max(v.findIndex(function(r) { return r.props.message === t.i18n.Messages.MARK_UNREAD }), 0),
-                          u = j.getMessage(n.channel_id, n.id),
-                          imageAttachments = u?.attachments?.filter(att => att.content_type?.startsWith("image"));
-                    if (!imageAttachments || imageAttachments.length === 0) return;
-                    const S = u?.id ?? n.id,
-                          se = u?.content ?? n.content,
-                          I = T.find(function(r) { return Object.keys(r)[0] === S }, "cache object"),
-                          _ = "Search Image",
-                          icon = c.getAssetIDByName("ic_search"),
-                          oe = function() {
-                              const selectedEngineURL = O.selectedEngineURL || "https://saucenao.com";
-                              if (imageAttachments.length === 1) {
-                                  const searchUrl = `${selectedEngineURL}/search.php?url=${encodeURIComponent(imageAttachments[0].url)}`;
-                                  t.url.openURL(searchUrl);
-                              } else {
-                                  const links = imageAttachments.map((att, index) => `> [Image ${index + 1}](${selectedEngineURL}/search.php?url=${encodeURIComponent(att.url)})`).join("\n");
-                                  t.FluxDispatcher.dispatch({
-                                      type: "MESSAGE_UPDATE",
-                                      message: { ...u, content: links, guild_id: V.getChannel(u.channel_id).guild_id },
-                                      log_edit: !1
-                                  });
-                              }
-                              M.hideActionSheet();
-                          };
-                    v.splice(re, 0, t.React.createElement(P, {
-                        label: _,
-                        icon: t.React.createElement(P.Icon, { source: icon, IconComponent: function() {
-                            return t.React.createElement(t.ReactNative.Image, { resizeMode: "cover", style: z.iconComponent, source: icon });
-                        }}),
-                        onPress: oe
-                    }));
-                });
-            });
-        });
-    }
-
     let b = [];
     var ne = {
-        onLoad: function() { return b = [K()] },
+        onLoad: function() { return b = [] },
         onUnload: function() { for (const e of b) e() },
         settings: SettingsPage
     };
