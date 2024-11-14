@@ -2,41 +2,13 @@
     "use strict";
     const defaultSearchEngines = {
         SauceNAO: "https://saucenao.com",
-        Google: "https://images.google.com",
-        TinEye: "https://tineye.com",
+        Google: "https://www.google.com/searchbyimage?image_url=%s&safe=off",
+        TinEye: "https://tineye.com/search?url=%s",
         FuzzySearch: "https://api-next.fuzzysearch.net/v1/url?url="
     };
 
     // Variable to store the currently selected search engine URL, defaults to SauceNAO
     let selectedSearchEngine = "SauceNAO";
-
-    var w = {
-        translate: async function (e) {
-            let a = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : "auto",
-                i = arguments.length > 2 ? arguments[2] : void 0,
-                s = arguments.length > 3 && arguments[3] !== void 0 ? arguments[3] : !1;
-            try {
-                if (s) return { source_lang: a, text: e };
-                const n = await (await fetch(defaultSearchEngines[selectedSearchEngine], {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ text: e, source_lang: a, target_lang: i })
-                })).json();
-                if (n.code !== 200) throw Error(`Failed to translate text from DeepL: ${n.message}`);
-                return { source_lang: a, text: n.data };
-            } catch (n) {
-                throw Error(`Failed to fetch from DeepL: ${n}`);
-            }
-        }
-    }, y;
-
-    const M = g.findByProps("openLazy", "hideActionSheet"),
-          P = ((y = g.findByProps("ActionSheetRow")) === null || y === void 0 ? void 0 : y.ActionSheetRow) ?? d.Forms.FormRow,
-          j = g.findByStoreName("MessageStore"),
-          V = g.findByStoreName("ChannelStore"),
-          z = t.stylesheet.createThemedStyleSheet({ iconComponent: { width: 24, height: 24, tintColor: C.semanticColors.INTERACTIVE_NORMAL } });
-
-    let T = [];
 
     async function processWithFuzzySearch(url) {
         const finalLink = `${defaultSearchEngines.FuzzySearch}${encodeURIComponent(url)}`;
@@ -50,6 +22,12 @@
         const data = await response.json();
         return data.url || url;
     }
+
+    const M = g.findByProps("openLazy", "hideActionSheet"),
+          P = ((y = g.findByProps("ActionSheetRow")) === null || y === void 0 ? void 0 : y.ActionSheetRow) ?? d.Forms.FormRow,
+          j = g.findByStoreName("MessageStore"),
+          V = g.findByStoreName("ChannelStore"),
+          z = t.stylesheet.createThemedStyleSheet({ iconComponent: { width: 24, height: 24, tintColor: C.semanticColors.INTERACTIVE_NORMAL } });
 
     function K() {
         return B.before("openLazy", M, function (e) {
@@ -67,25 +45,24 @@
                           u = j.getMessage(n.channel_id, n.id),
                           imageAttachments = u?.attachments?.filter(att => att.content_type?.startsWith("image"));
                     if (!imageAttachments || imageAttachments.length === 0) return;
-                    const S = u?.id ?? n.id,
-                          se = u?.content ?? n.content,
-                          _ = "SauceNAO",
-                          icon = c.getAssetIDByName("ic_search"),
-                          oe = async function () {
-                              if (selectedSearchEngine === "FuzzySearch") {
-                                  const searchUrl = await processWithFuzzySearch(imageAttachments[0].url);
-                                  t.url.openURL(searchUrl);
-                              } else {
-                                  const searchUrl = `${defaultSearchEngines[selectedSearchEngine]}/search.php?url=${encodeURIComponent(imageAttachments[0].url)}`;
-                                  t.url.openURL(searchUrl);
-                              }
-                              M.hideActionSheet();
-                          };
+                    const oe = async function () {
+                        let searchUrl;
+                        if (selectedSearchEngine === "FuzzySearch") {
+                            searchUrl = await processWithFuzzySearch(imageAttachments[0].url);
+                        } else if (selectedSearchEngine === "Google" || selectedSearchEngine === "TinEye") {
+                            const fuzzyURL = await processWithFuzzySearch(imageAttachments[0].url);
+                            searchUrl = defaultSearchEngines[selectedSearchEngine].replace("%s", encodeURIComponent(fuzzyURL));
+                        } else {
+                            searchUrl = defaultSearchEngines[selectedSearchEngine].replace("%s", encodeURIComponent(imageAttachments[0].url));
+                        }
+                        t.url.openURL(searchUrl);
+                        M.hideActionSheet();
+                    };
                     v.splice(re, 0, t.React.createElement(P, {
                         label: selectedSearchEngine,
                         icon: t.React.createElement(P.Icon, {
-                            source: icon,
-                            IconComponent: function () { return t.React.createElement(t.ReactNative.Image, { resizeMode: "cover", style: z.iconComponent, source: icon }); }
+                            source: c.getAssetIDByName("ic_search"),
+                            IconComponent: function () { return t.React.createElement(t.ReactNative.Image, { resizeMode: "cover", style: z.iconComponent, source: c.getAssetIDByName("ic_search") }); }
                         }),
                         onPress: oe
                     }));
