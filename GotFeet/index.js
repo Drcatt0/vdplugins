@@ -1,14 +1,13 @@
+import * as common from "../../common";
+import { semanticColors } from "@vendetta/ui";
 import { registerCommand } from "@vendetta/commands";
 import { findByStoreName, findByProps } from "@vendetta/metro";
-import { mSendMessage } from "@vendetta/common/sendMessage";
-import { semanticColors } from "@vendetta/ui";
 
-// Resolve the theme color
+// Theme color for embeds
 const ThemeStore = findByStoreName("ThemeStore");
 const EMBED_COLOR = () =>
     parseInt(findByProps("colors", "meta").meta.resolveSemanticColor(ThemeStore.theme, semanticColors.BACKGROUND_SECONDARY).slice(1), 16);
 
-// Define the bot author details
 const authorMods = {
     author: {
         username: "GotFeetBot",
@@ -17,18 +16,21 @@ const authorMods = {
     },
 };
 
-// Ensure we have access to sendMessage function
+// Send message helper function
 let madeSendMessage;
 function sendMessage() {
-    if (!madeSendMessage) madeSendMessage = mSendMessage(vendetta);
+    if (!madeSendMessage) madeSendMessage = common.mSendMessage(vendetta);
     return madeSendMessage(...arguments);
 }
 
 export default {
     meta: vendetta.plugin,
     patches: [],
+    onUnload() {
+        this.patches.forEach((up) => up()); // Unpatch every patch
+        this.patches = [];
+    },
     onLoad() {
-        // Register the /gotfeet command
         const command = registerCommand({
             name: "gotfeet",
             displayName: "gotfeet",
@@ -42,7 +44,7 @@ export default {
                 try {
                     const subreddits = ["feet", "feetishh", "feetinyourface", "feetqueens", "feettoesandsocks"];
                     const subreddit = subreddits[Math.floor(Math.random() * subreddits.length)];
-
+                    
                     // Fetch posts from Reddit
                     const response = await fetch(`https://www.reddit.com/r/${subreddit}/top.json?limit=10`);
                     const data = await response.json();
@@ -103,12 +105,6 @@ export default {
             },
         });
 
-        // Store the patch for unloading later
         this.patches.push(command);
-    },
-    onUnload() {
-        // Unregister the command and unload patches
-        this.patches.forEach(unpatch => unpatch());
-        this.patches = [];
     },
 };
