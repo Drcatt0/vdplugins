@@ -114,18 +114,18 @@
                                     content: redditData.error
                                 }, messageMods);
                             } else {
+                                // Send image URL directly in content and use embed for other info
                                 botSendMessage({
                                     loggingName: "FeetBot output message",
                                     channelId: ctx.channel.id,
+                                    content: redditData.image, // Forcing image preview by placing URL here
                                     embeds: [
                                         {
                                             color: EMBED_COLOR(),
                                             type: "rich",
                                             title: redditData.title,
-                                            description: redditData.description + "\n\n[Direct Link to Image](" + redditData.image + ")",
-                                            url: redditData.url,
-                                            image: { url: redditData.image },
-                                            thumbnail: { url: redditData.image } // Backup display
+                                            description: redditData.description,
+                                            url: redditData.url
                                         },
                                     ],
                                 }, messageMods);
