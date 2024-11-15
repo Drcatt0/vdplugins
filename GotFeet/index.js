@@ -118,8 +118,8 @@
                                             type: "rich",
                                             title: redditData.title,
                                             description: redditData.description,
-                                            image: { url: redditData.image },
-                                            url: redditData.url
+                                            url: redditData.url,
+                                            image: { url: redditData.image }
                                         },
                                     ],
                                 }, messageMods);
