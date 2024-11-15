@@ -1,4 +1,4 @@
-(function(p, A, U, h, B, C, N, $) {
+(function (p, A, U, h, B, C, N, $) {
     "use strict";
 
     function botMessageHandler(e) {
@@ -8,7 +8,7 @@
             botAvatars = findByProps("BOT_AVATARS"),
             { getChannelId } = findByStoreName("SelectedChannelStore");
 
-        return function(message, customizations) {
+        return function (message, customizations) {
             if (!message.channelId) message.channelId = getChannelId();
             if (!message.channelId) throw new Error("No channel id provided");
 
@@ -43,7 +43,7 @@
             author: {
                 username: "Feet",
                 avatar: "command",
-                avatarURL: "https://cdn.discordapp.com/embed/avatars/1.png" // Example avatar URL
+                avatarURL: "https://cdn.discordapp.com/embed/avatars/1.png"
             }
         };
 
@@ -52,6 +52,32 @@
         if (window.sendMessage) return window.sendMessage(...arguments);
         if (!sendMessage) sendMessage = botMessageHandler(vendetta);
         return sendMessage(...arguments);
+    }
+
+    async function fetchRandomRedditImage() {
+        try {
+            const subreddits = ["feet", "feetishh", "feetinyourface", "feetqueens", "feettoesandsocks"];
+            const subreddit = subreddits[Math.floor(Math.random() * subreddits.length)];
+            const response = await fetch(`https://www.reddit.com/r/${subreddit}/top.json?limit=10`);
+            const data = await response.json();
+            const posts = data.data.children;
+            const imagePosts = posts.filter(post => post.data.post_hint === "image");
+
+            if (imagePosts.length > 0) {
+                const randomPost = imagePosts[Math.floor(Math.random() * imagePosts.length)];
+                return {
+                    title: `Random post from r/${subreddit}`,
+                    url: randomPost.data.url,
+                    description: randomPost.data.title,
+                    image: randomPost.data.url
+                };
+            } else {
+                return { error: `No images found in r/${subreddit}.` };
+            }
+        } catch (error) {
+            console.error("Error fetching image:", error);
+            return { error: "Failed to retrieve image." };
+        }
     }
 
     var plugin = {
@@ -63,43 +89,56 @@
         },
         onLoad() {
             try {
-                const helloCommand = {
-                    get(args, ctx) {
+                const gotFeetCommand = {
+                    async get(args, ctx) {
                         try {
                             const messageMods = {
                                 ...authorDetails,
                                 interaction: {
-                                    name: "/hello",
+                                    name: "/gotfeet",
                                     user: h.findByStoreName("UserStore").getCurrentUser(),
                                 },
                             };
-                            botSendMessage({
-                                loggingName: "FeetBot output message",
-                                channelId: ctx.channel.id,
-                                embeds: [
-                                    {
-                                        color: EMBED_COLOR(),
-                                        type: "rich",
-                                        title: "Hello World!",
-                                        description: "This is a test message from FeetBot.",
-                                    },
-                                ],
-                            }, messageMods);
+
+                            const redditData = await fetchRandomRedditImage();
+
+                            if (redditData.error) {
+                                botSendMessage({
+                                    loggingName: "FeetBot error message",
+                                    channelId: ctx.channel.id,
+                                    content: redditData.error
+                                }, messageMods);
+                            } else {
+                                botSendMessage({
+                                    loggingName: "FeetBot output message",
+                                    channelId: ctx.channel.id,
+                                    embeds: [
+                                        {
+                                            color: EMBED_COLOR(),
+                                            type: "rich",
+                                            title: redditData.title,
+                                            description: redditData.description,
+                                            image: { url: redditData.image },
+                                            url: redditData.url
+                                        },
+                                    ],
+                                }, messageMods);
+                            }
                         } catch (e) {
                             console.error(e);
-                            alert("There was an error while executing /hello\n" + e.stack);
+                            alert("There was an error while executing /gotfeet\n" + e.stack);
                         }
                     },
                 };
 
-                // Register the /hello command
+                // Register the /gotfeet command
                 this.patches.push(U.registerCommand({
                     type: 1,
                     inputType: 1,
                     applicationId: "-1",
-                    execute: helloCommand.get,
-                    name: "hello",
-                    description: "Sends a Hello World message",
+                    execute: gotFeetCommand.get,
+                    name: "gotfeet",
+                    description: "Fetches a random post from selected subreddits.",
                 }));
             } catch (e) {
                 console.error(e);
