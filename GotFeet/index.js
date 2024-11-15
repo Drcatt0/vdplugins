@@ -51,9 +51,9 @@
     function l(n, t, s) {
         const a = n ?? A?.getChannelId?.(),
             i = N.createBotMessage({ channelId: a, content: "", embeds: s });
-        i.author.username = "GotFeet";
+        i.author.username = "GotFeet"; // Updated bot name
         i.author.avatar = "GotFeet";
-        $.BOT_AVATARS.FeetBot = "https://media.discordapp.net/attachments/1283072767285002341/1307009821068890163/GYLD4GSWUAAxoch.png"; // FeetBot's avatar URL
+        $.BOT_AVATARS.GotFeet = "https://media.discordapp.net/attachments/1283072767285002341/1307009821068890163/GYLD4GSWUAAxoch.png"; // Updated profile picture
 
         if (typeof t === "string") {
             i.content = t;
