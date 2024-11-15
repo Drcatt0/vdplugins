@@ -41,7 +41,7 @@
     const EMBED_COLOR = () => parseInt("0xFFFFFF"),
         authorDetails = {
             author: {
-                username: "Feet",
+                username: "FeetBot",
                 avatar: "command",
                 avatarURL: "https://cdn.discordapp.com/embed/avatars/1.png"
             }
@@ -58,13 +58,18 @@
         try {
             const subreddits = ["feet", "feetishh", "feetinyourface", "feetqueens", "feettoesandsocks"];
             const subreddit = subreddits[Math.floor(Math.random() * subreddits.length)];
+            console.log(`Fetching from subreddit: r/${subreddit}`); // Debugging line
+
             const response = await fetch(`https://www.reddit.com/r/${subreddit}/top.json?limit=10`);
             const data = await response.json();
             const posts = data.data.children;
             const imagePosts = posts.filter(post => post.data.post_hint === "image");
 
+            console.log("Fetched image posts:", imagePosts); // Debugging line
+
             if (imagePosts.length > 0) {
                 const randomPost = imagePosts[Math.floor(Math.random() * imagePosts.length)];
+                console.log("Selected random post:", randomPost); // Debugging line
                 return {
                     title: `Random post from r/${subreddit}`,
                     url: randomPost.data.url,
