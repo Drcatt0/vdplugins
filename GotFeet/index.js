@@ -12,7 +12,7 @@
         
         botMessage.author.username = "FeetBot";
         botMessage.author.avatar = "FeetBot";
-        $.BOT_AVATARS.FeetBot = "https://cdn.discordapp.com/embed/avatars/0.png";  // Use an avatar URL for FeetBot
+        $.BOT_AVATARS.FeetBot = "https://cdn.discordapp.com/embed/avatars/0.png";  // Set FeetBot's avatar URL
 
         if (typeof content === "string") {
             botMessage.content = content;
