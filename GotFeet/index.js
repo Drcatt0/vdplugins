@@ -1,35 +1,60 @@
 (function (c, p, y, d, u, r, w, b) {
     "use strict";
+    const { ScrollView: v } = u.General,
+        { FormSection: f, FormRadioRow: _, FormSwitchRow: F, FormIcon: S } = u.Forms;
+
+    function R() {
+        return w.useProxy(r.storage), React.createElement(v, null,
+            React.createElement(f, { title: "Misc Settings", titleStyleType: "no_border" }),
+            React.createElement(F, {
+                label: "NSFW Warning",
+                subLabel: "Warn when sending an NSFW image in a non NSFW channel.",
+                leading: React.createElement(S, { source: b.getAssetIDByName("ic_warning_24px") }),
+                value: r.storage.nsfwwarn,
+                onValueChange: function (n) { return r.storage.nsfwwarn = n }
+            }),
+            React.createElement(f, { title: "Default Sort", titleStyleType: "no_border" },
+                Object.entries({ Best: "best", Hot: "hot", New: "new", Rising: "rising", Top: "top", Controversial: "controversial" })
+                    .map(function (n) {
+                        let [t, s] = n;
+                        return React.createElement(_, {
+                            label: t,
+                            selected: r.storage.sortdefs === s,
+                            onPress: function () { r.storage.sortdefs = s }
+                        })
+                    })
+            )
+        );
+    }
 
     const g = d.findByProps("sendMessage", "receiveMessage"),
         A = d.findByProps("getLastSelectedChannelId"),
         N = d.findByProps("createBotMessage"),
         $ = d.findByProps("BOT_AVATARS");
 
-    function sendEmbedMessage(channelId, content, embeds) {
-        const a = channelId ?? A?.getChannelId?.();
-        const botMessage = N.createBotMessage({ channelId: a, content: "", embeds: embeds });
-
-        botMessage.author.username = "FeetBot";
-        botMessage.author.avatar = "FeetBot";
+    function l(n, t, s) {
+        const a = n ?? A?.getChannelId?.(),
+            i = N.createBotMessage({ channelId: a, content: "", embeds: s });
+        i.author.username = "FeetBot";
+        i.author.avatar = "FeetBot";
         $.BOT_AVATARS.FeetBot = "https://cdn.discordapp.com/embed/avatars/0.png"; // FeetBot's avatar URL
 
-        if (typeof content === "string") {
-            botMessage.content = content;
+        if (typeof t === "string") {
+            i.content = t;
         } else {
-            Object.assign(botMessage, content);
+            Object.assign(i, t);
         }
 
-        g.receiveMessage(a, botMessage);
+        g.receiveMessage(a, i);
     }
 
-    let commands = [];
+    let m = [];
 
-    commands.push(p.registerCommand({
+    m.push(p.registerCommand({
         name: "gotfeet",
         displayName: "gotfeet",
-        description: "Fetches a random post from r/feet.",
-        displayDescription: "Fetches a random post from r/feet.",
+        description: "Get an image from r/feet",
+        displayDescription: "Get an image from r/feet",
         options: [
             {
                 name: "sort",
@@ -51,59 +76,56 @@
         applicationId: "-1",
         inputType: 1,
         type: 1,
-        execute: async function (args, ctx) {
+        execute: async function (n, t) {
             try {
-                const sort = args.find(o => o.name === "sort")?.value ?? r.storage.sortdefs;
-                const silent = args.find(o => o.name === "silent")?.value;
+                let s = n.find(o => o.name === "sort")?.value,
+                    i = n.find(o => o.name === "silent")?.value;
 
-                if (!["best", "hot", "new", "rising", "top", "controversial"].includes(sort)) {
-                    sendEmbedMessage(ctx.channel.id, "Incorrect sorting type. Valid options are `best`, `hot`, `new`, `rising`, `top`, `controversial`.", []);
+                if (typeof s === "undefined") s = r.storage.sortdefs;
+
+                if (!["best", "hot", "new", "rising", "top", "controversial"].includes(s)) {
+                    l(t.channel.id, "Incorrect sorting type. Valid options are `best`, `hot`, `new`, `rising`, `top`, `controversial`.", []);
                     return;
                 }
 
-                let response = await fetch(`https://www.reddit.com/r/feet/${sort}.json?limit=100`).then(o => o.json());
-                let post = response.data?.children?.[Math.floor(Math.random() * response.data?.children?.length)]?.data;
+                let e = await fetch(`https://www.reddit.com/r/feet/${s}.json?limit=100`).then(o => o.json());
+                e = e.data?.children?.[Math.floor(Math.random() * e.data?.children?.length)]?.data;
 
-                if (!post) {
-                    sendEmbedMessage(ctx.channel.id, "No posts found in r/feet.", []);
-                    return;
-                }
+                let h = await fetch(`https://www.reddit.com/u/${e?.author}/about.json`).then(o => o.json());
 
-                let authorResponse = await fetch(`https://www.reddit.com/u/${post?.author}/about.json`).then(o => o.json());
-                let authorIconUrl = authorResponse?.data?.icon_img?.split("?")[0];
-
-                if (silent ?? true) {
-                    sendEmbedMessage(ctx.channel.id, "", [
+                if (i ?? true) {
+                    l(t.channel.id, "", [
                         {
                             type: "rich",
-                            title: post?.title,
-                            url: `https://reddit.com${post?.permalink}`,
+                            title: e?.title,
+                            url: `https://reddit.com${e?.permalink}`,
                             author: {
-                                name: `u/${post?.author} • r/${post?.subreddit}`,
-                                icon_url: authorIconUrl,
+                                name: `u/${e?.author} • r/${e?.subreddit}`,
+                                proxy_icon_url: h?.data.icon_img.split("?")[0],
+                                icon_url: h?.data.icon_img.split("?")[0]
                             },
                             image: {
-                                url: post?.url_overridden_by_dest?.replace(/.gifv$/g, ".gif") ?? post?.url?.replace(/.gifv$/g, ".gif"),
+                                proxy_url: e?.url_overridden_by_dest.replace(/.gifv$/g, ".gif") ?? e?.url.replace(/.gifv$/g, ".gif"),
+                                url: e?.url_overridden_by_dest?.replace(/.gifv$/g, ".gif") ?? e?.url?.replace(/.gifv$/g, ".gif"),
+                                width: e?.preview?.images?.[0]?.source?.width,
+                                height: e?.preview?.images?.[0]?.source?.height
                             },
-                            color: 0xf4b8e4,
+                            color: 0xf4b8e4
                         }
                     ]);
                 } else {
-                    g.sendMessage(ctx.channel.id, { content: post?.url_overridden_by_dest ?? post?.url });
+                    g.sendMessage(t.channel.id, { content: e?.url_overridden_by_dest ?? e?.url });
                 }
             } catch (error) {
-                console.error("Error fetching image:", error);
-                sendEmbedMessage(ctx.channel.id, "Failed to retrieve image.", []);
+                y.logger.log(error);
+                l(t.channel.id, "ERROR 😭😭😭 Check debug logs!! 🥺🥺🥺", []);
             }
         }
     }));
 
-    return {
-        onLoad() {
-            commands.forEach(cmd => cmd());
-        },
-        onUnload() {
-            commands.forEach(cmd => cmd());
-        }
-    };
-})(vendetta.commands, vendetta, vendetta, vendetta.metro, vendetta.ui.components, vendetta.plugin, vendetta.storage, vendetta.ui.assets);
+    const M = R,
+        B = function () { r.storage.nsfwwarn ??= true; r.storage.sortdefs ??= "new"; },
+        j = function () { for (const n of m) n(); };
+
+    return c.onLoad = B, c.onUnload = j, c.settings = M, c;
+})({}, vendetta.commands, vendetta, vendetta.metro, vendetta.ui.components, vendetta.plugin, vendetta.storage, vendetta.ui.assets)
