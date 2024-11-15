@@ -53,9 +53,24 @@
     m.push(p.registerCommand({
         name: "gotfeet",
         displayName: "gotfeet",
-        description: "Get an image from r/feet",
-        displayDescription: "Get an image from r/feet",
+        description: "Get an image from selected subreddits",
+        displayDescription: "Get an image from selected subreddits",
         options: [
+            {
+                name: "subreddit",
+                displayName: "subreddit",
+                description: "Choose a subreddit to fetch from.",
+                displayDescription: "Choose a subreddit to fetch from",
+                required: false,
+                type: 3,
+                choices: [
+                    { name: "r/feet", value: "feet" },
+                    { name: "r/feetishh", value: "feetishh" },
+                    { name: "r/feetinyourface", value: "feetinyourface" },
+                    { name: "r/feetqueens", value: "feetqueens" },
+                    { name: "r/feettoesandsocks", value: "feettoesandsocks" }
+                ]
+            },
             {
                 name: "sort",
                 displayName: "sort",
@@ -78,43 +93,42 @@
         type: 1,
         execute: async function (n, t) {
             try {
-                let s = n.find(o => o.name === "sort")?.value,
-                    i = n.find(o => o.name === "silent")?.value;
+                let subreddit = n.find(o => o.name === "subreddit")?.value || "feet",
+                    sort = n.find(o => o.name === "sort")?.value || r.storage.sortdefs,
+                    silent = n.find(o => o.name === "silent")?.value;
 
-                if (typeof s === "undefined") s = r.storage.sortdefs;
-
-                if (!["best", "hot", "new", "rising", "top", "controversial"].includes(s)) {
+                if (!["best", "hot", "new", "rising", "top", "controversial"].includes(sort)) {
                     l(t.channel.id, "Incorrect sorting type. Valid options are `best`, `hot`, `new`, `rising`, `top`, `controversial`.", []);
                     return;
                 }
 
-                let e = await fetch(`https://www.reddit.com/r/feet/${s}.json?limit=100`).then(o => o.json());
-                e = e.data?.children?.[Math.floor(Math.random() * e.data?.children?.length)]?.data;
+                let response = await fetch(`https://www.reddit.com/r/${subreddit}/${sort}.json?limit=100`).then(o => o.json());
+                let post = response.data?.children?.[Math.floor(Math.random() * response.data?.children?.length)]?.data;
 
-                let h = await fetch(`https://www.reddit.com/u/${e?.author}/about.json`).then(o => o.json());
+                let authorInfo = await fetch(`https://www.reddit.com/u/${post?.author}/about.json`).then(o => o.json());
 
-                if (i ?? true) {
-                    l(t.channel.id, "", [
-                        {
-                            type: "rich",
-                            title: e?.title,
-                            url: `https://reddit.com${e?.permalink}`,
-                            author: {
-                                name: `u/${e?.author} • r/${e?.subreddit}`,
-                                proxy_icon_url: h?.data.icon_img.split("?")[0],
-                                icon_url: h?.data.icon_img.split("?")[0]
-                            },
-                            image: {
-                                proxy_url: e?.url_overridden_by_dest.replace(/.gifv$/g, ".gif") ?? e?.url.replace(/.gifv$/g, ".gif"),
-                                url: e?.url_overridden_by_dest?.replace(/.gifv$/g, ".gif") ?? e?.url?.replace(/.gifv$/g, ".gif"),
-                                width: e?.preview?.images?.[0]?.source?.width,
-                                height: e?.preview?.images?.[0]?.source?.height
-                            },
-                            color: 0xf4b8e4
-                        }
-                    ]);
+                let embed = {
+                    type: "rich",
+                    title: post?.title,
+                    url: `https://reddit.com${post?.permalink}`,
+                    author: {
+                        name: `u/${post?.author} • r/${post?.subreddit}`,
+                        proxy_icon_url: authorInfo?.data.icon_img.split("?")[0],
+                        icon_url: authorInfo?.data.icon_img.split("?")[0]
+                    },
+                    image: {
+                        proxy_url: post?.url_overridden_by_dest?.replace(/.gifv$/g, ".gif") || post?.url?.replace(/.gifv$/g, ".gif"),
+                        url: post?.url_overridden_by_dest?.replace(/.gifv$/g, ".gif") || post?.url?.replace(/.gifv$/g, ".gif"),
+                        width: post?.preview?.images?.[0]?.source?.width,
+                        height: post?.preview?.images?.[0]?.source?.height
+                    },
+                    color: 0xf4b8e4
+                };
+
+                if (silent ?? true) {
+                    l(t.channel.id, "", [embed]);
                 } else {
-                    g.sendMessage(t.channel.id, { content: e?.url_overridden_by_dest ?? e?.url });
+                    g.sendMessage(t.channel.id, { content: post?.url_overridden_by_dest ?? post?.url });
                 }
             } catch (error) {
                 y.logger.log(error);
@@ -128,4 +142,4 @@
         j = function () { for (const n of m) n(); };
 
     return c.onLoad = B, c.onUnload = j, c.settings = M, c;
-})({}, vendetta.commands, vendetta, vendetta.metro, vendetta.ui.components, vendetta.plugin, vendetta.storage, vendetta.ui.assets)
+})({}, vendetta.commands, vendetta, vendetta.metro, vendetta.ui.components, vendetta.plugin, vendetta.storage, vendetta.ui.assets);
