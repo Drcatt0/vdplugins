@@ -122,9 +122,10 @@
                                             color: EMBED_COLOR(),
                                             type: "rich",
                                             title: redditData.title,
-                                            description: redditData.description,
+                                            description: redditData.description + "\n\n[Direct Link to Image](" + redditData.image + ")",
                                             url: redditData.url,
-                                            image: { url: redditData.image }
+                                            image: { url: redditData.image },
+                                            thumbnail: { url: redditData.image } // Backup display
                                         },
                                     ],
                                 }, messageMods);
