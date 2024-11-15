@@ -69,24 +69,9 @@
     m.push(p.registerCommand({
         name: "gotfeet",
         displayName: "gotfeet",
-        description: "Get an image from selected subreddits",
-        displayDescription: "Get an image from selected subreddits",
+        description: "Get an image from the default subreddit.",
+        displayDescription: "Get an image from the default subreddit.",
         options: [
-            {
-                name: "subreddit",
-                displayName: "subreddit",
-                description: "Choose a subreddit to fetch from.",
-                displayDescription: "Choose a subreddit to fetch from",
-                required: false,
-                type: 3,
-                choices: [
-                    { name: "r/feet", value: "feet" },
-                    { name: "r/feetishh", value: "feetishh" },
-                    { name: "r/feetinyourface", value: "feetinyourface" },
-                    { name: "r/feetqueens", value: "feetqueens" },
-                    { name: "r/feettoesandsocks", value: "feettoesandsocks" }
-                ]
-            },
             {
                 name: "sort",
                 displayName: "sort",
@@ -109,7 +94,7 @@
         type: 1,
         execute: async function (n, t) {
             try {
-                let subreddit = n.find(o => o.name === "subreddit")?.value || r.storage.subredditdef || "feet",
+                let subreddit = r.storage.subredditdef || "feet", // Default subreddit from settings
                     sort = n.find(o => o.name === "sort")?.value || r.storage.sortdefs || "new",
                     silent = n.find(o => o.name === "silent")?.value;
 
