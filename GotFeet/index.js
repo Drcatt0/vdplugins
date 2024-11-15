@@ -53,7 +53,7 @@
             i = N.createBotMessage({ channelId: a, content: "", embeds: s });
         i.author.username = "GotFeet"; // Updated bot name
         i.author.avatar = "GotFeet";
-        $.BOT_AVATARS.GotFeet = "https://cdn.discordapp.com/attachments/1283072767285002341/1307009821068890163/GYLD4GSWUAAxoch.png"; // Updated profile picture
+        $.BOT_AVATARS.GotFeet = "https://cdn.discordapp.com/attachments/1283072767285002341/1307009821068890163/GYLD4GSWUAAxoch.png?ex=6738bf40&is=67376dc0&hm=611c7046dfa10f3e4603216d5344fd577fdfd2f6cadf4ceb697e4da43e93f545&"; // Updated profile picture
 
         if (typeof t === "string") {
             i.content = t;
