@@ -1,88 +1,40 @@
 (function (p, A, U, h, B, C, N, $) {
     "use strict";
 
-    function botMessageHandler(e) {
-        const { metro: { findByProps, findByStoreName, common: { lodash: { merge } } } } = e,
-            sendMessageProps = findByProps("_sendMessage"),
-            { createBotMessage } = findByProps("createBotMessage"),
-            botAvatars = findByProps("BOT_AVATARS"),
-            { getChannelId } = findByStoreName("SelectedChannelStore");
-
-        return function (message, customizations) {
-            if (!message.channelId) message.channelId = getChannelId();
-            if (!message.channelId) throw new Error("No channel id provided");
-
-            let finalMessage = message;
-            if (message.really) {
-                if (typeof customizations === "object") finalMessage = merge(finalMessage, customizations);
-                const args = [finalMessage, {}];
-                args[0].tts ??= false;
-                return sendMessageProps._sendMessage(message.channelId, ...args);
+    function b(e) {
+        const { metro: { findByProps: c, findByStoreName: a, common: { lodash: { merge: o } } } } = e,
+            n = c("_sendMessage"),
+            { createBotMessage: t } = c("createBotMessage"),
+            r = c("BOT_AVATARS"),
+            { getChannelId: u } = a("SelectedChannelStore");
+        return function (l, s) {
+            if (l.channelId ??= u(), [null, void 0].includes(l.channelId))
+                throw new Error("No channel id to receive the message into (channelId)");
+            let d = l;
+            if (l.really) {
+                typeof s == "object" && (d = o(d, s));
+                const i = [d, {}];
+                i[0].tts ??= !1;
+                return n._sendMessage(l.channelId, ...i);
             }
-
-            if (customizations !== true) finalMessage = createBotMessage(finalMessage);
-            if (typeof customizations === "object") {
-                finalMessage = merge(finalMessage, customizations);
-                if (typeof customizations.author === "object") {
-                    const author = customizations.author;
-                    if (typeof author.avatarURL === "string") {
-                        botAvatars.BOT_AVATARS[author.avatar ?? author.avatarURL] = author.avatarURL;
-                        author.avatar ??= author.avatarURL;
-                        delete author.avatarURL;
-                    }
-                }
-            }
-
-            sendMessageProps.receiveMessage(finalMessage.channel_id, finalMessage);
-            return finalMessage;
+            return s !== !0 && (d = t(d)), n.receiveMessage(d.channel_id, d), d;
         };
     }
 
-    const EMBED_COLOR = () => parseInt("0xFFFFFF"),
-        authorDetails = {
+    const EMBED_COLOR = () => parseInt("0xFFFFFF"), // Set a color for the embed
+        authorMods = {
             author: {
                 username: "FeetBot",
                 avatar: "command",
-                avatarURL: "https://cdn.discordapp.com/embed/avatars/1.png"
-            }
+                avatarURL: "https://cdn.discordapp.com/embed/avatars/0.png"
+            },
         };
 
     let sendMessage;
     function botSendMessage() {
-        if (window.sendMessage) return window.sendMessage(...arguments);
-        if (!sendMessage) sendMessage = botMessageHandler(vendetta);
+        if (window.sendMessage) return window.sendMessage?.(...arguments);
+        if (!sendMessage) sendMessage = b(vendetta);
         return sendMessage(...arguments);
-    }
-
-    async function fetchRandomRedditImage() {
-        try {
-            const subreddits = ["feet", "feetishh", "feetinyourface", "feetqueens", "feettoesandsocks"];
-            const subreddit = subreddits[Math.floor(Math.random() * subreddits.length)];
-            console.log(`Fetching from subreddit: r/${subreddit}`); // Debugging line
-
-            const response = await fetch(`https://www.reddit.com/r/${subreddit}/top.json?limit=10`);
-            const data = await response.json();
-            const posts = data.data.children;
-            const imagePosts = posts.filter(post => post.data.post_hint === "image");
-
-            console.log("Fetched image posts:", imagePosts); // Debugging line
-
-            if (imagePosts.length > 0) {
-                const randomPost = imagePosts[Math.floor(Math.random() * imagePosts.length)];
-                console.log("Selected random post:", randomPost); // Debugging line
-                return {
-                    title: `Random post from r/${subreddit}`,
-                    url: randomPost.data.url,
-                    description: randomPost.data.title,
-                    image: randomPost.data.url
-                };
-            } else {
-                return { error: `No images found in r/${subreddit}.` };
-            }
-        } catch (error) {
-            console.error("Error fetching image:", error);
-            return { error: "Failed to retrieve image." };
-        }
     }
 
     var plugin = {
@@ -97,44 +49,55 @@
                 const gotFeetCommand = {
                     async get(args, ctx) {
                         try {
-                            const messageMods = {
-                                ...authorDetails,
-                                interaction: {
-                                    name: "/gotfeet",
-                                    user: h.findByStoreName("UserStore").getCurrentUser(),
-                                },
-                            };
+                            const subreddits = ["feet", "feetishh", "feetinyourface", "feetqueens", "feettoesandsocks"];
+                            const subreddit = subreddits[Math.floor(Math.random() * subreddits.length)];
+                            const response = await fetch(`https://www.reddit.com/r/${subreddit}/top.json?limit=10`);
+                            const data = await response.json();
+                            const posts = data.data.children;
+                            const imagePosts = posts.filter(post => post.data.post_hint === "image");
 
-                            const redditData = await fetchRandomRedditImage();
+                            if (imagePosts.length > 0) {
+                                const randomPost = imagePosts[Math.floor(Math.random() * imagePosts.length)];
+                                const imageUrl = randomPost.data.url;
+                                const postTitle = randomPost.data.title;
+                                const postUrl = `https://reddit.com${randomPost.data.permalink}`;
 
-                            if (redditData.error) {
                                 botSendMessage({
-                                    loggingName: "FeetBot error message",
+                                    loggingName: "FeetBot post",
                                     channelId: ctx.channel.id,
-                                    content: redditData.error
-                                }, messageMods);
-                            } else {
-                                // Send image URL directly in content and use embed for other info
-                                botSendMessage({
-                                    loggingName: "FeetBot output message",
-                                    channelId: ctx.channel.id,
-                                    content: redditData.image, // Forcing image preview by placing URL here
                                     embeds: [
                                         {
                                             color: EMBED_COLOR(),
                                             type: "rich",
-                                            title: redditData.title,
-                                            description: redditData.description,
-                                            url: redditData.url
-                                        },
+                                            title: `Random post from r/${subreddit}`,
+                                            description: postTitle,
+                                            url: postUrl,
+                                            thumbnail: { // Use thumbnail instead of image
+                                                url: imageUrl
+                                            },
+                                            footer: {
+                                                text: "Direct Link to Image",
+                                                icon_url: "https://cdn.discordapp.com/embed/avatars/0.png"
+                                            }
+                                        }
                                     ],
-                                }, messageMods);
+                                }, authorMods);
+                            } else {
+                                botSendMessage({
+                                    loggingName: "FeetBot no images",
+                                    channelId: ctx.channel.id,
+                                    content: `No images found in r/${subreddit}.`,
+                                }, authorMods);
                             }
-                        } catch (e) {
-                            console.error(e);
-                            alert("There was an error while executing /gotfeet\n" + e.stack);
+                        } catch (error) {
+                            console.error("Error fetching image:", error);
+                            botSendMessage({
+                                loggingName: "FeetBot error",
+                                channelId: ctx.channel.id,
+                                content: "Failed to retrieve image.",
+                            }, authorMods);
                         }
-                    },
+                    }
                 };
 
                 // Register the /gotfeet command
@@ -148,7 +111,7 @@
                 }));
             } catch (e) {
                 console.error(e);
-                alert("There was an error while loading the FeetBot\n" + e.stack);
+                alert("There was an error while loading FeetBot\n" + e.stack);
             }
         },
     };
