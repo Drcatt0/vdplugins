@@ -1,46 +1,56 @@
-(function (p, A, U, h, B, C, N, $) {
+(function(p, A, U, h, B, C, N, $) {
     "use strict";
 
-    function createSendMessageFunction(e) {
-        const { metro: { findByProps, findByStoreName, common: { lodash: { merge } } } } = e;
-        const { _sendMessage } = findByProps("_sendMessage");
-        const { createBotMessage } = findByProps("createBotMessage");
-        const { BOT_AVATARS } = findByProps("BOT_AVATARS");
-        const { getChannelId } = findByStoreName("SelectedChannelStore");
+    function botMessageHandler(e) {
+        const { metro: { findByProps, findByStoreName, common: { lodash: { merge } } } } = e,
+            sendMessageProps = findByProps("_sendMessage"),
+            { createBotMessage } = findByProps("createBotMessage"),
+            botAvatars = findByProps("BOT_AVATARS"),
+            { getChannelId } = findByStoreName("SelectedChannelStore");
 
-        return function (msg, options) {
-            if (!msg.channelId) msg.channelId = getChannelId();
-            if (!msg.channelId) throw new Error("No channel id to receive the message into (channelId)");
+        return function(message, customizations) {
+            if (!message.channelId) message.channelId = getChannelId();
+            if (!message.channelId) throw new Error("No channel id provided");
 
-            let message = msg;
-
-            if (msg.really) {
-                if (typeof options === "object") message = merge(message, options);
-                const args = [message, {}];
-                args[0].tts = args[0].tts || false;
-
-                return _sendMessage(message.channelId, ...args);
+            let finalMessage = message;
+            if (message.really) {
+                if (typeof customizations === "object") finalMessage = merge(finalMessage, customizations);
+                const args = [finalMessage, {}];
+                args[0].tts ??= false;
+                return sendMessageProps._sendMessage(message.channelId, ...args);
             }
 
-            if (options !== true) message = createBotMessage(message);
-            _sendMessage.receiveMessage(message.channel_id, message);
-            return message;
+            if (customizations !== true) finalMessage = createBotMessage(finalMessage);
+            if (typeof customizations === "object") {
+                finalMessage = merge(finalMessage, customizations);
+                if (typeof customizations.author === "object") {
+                    const author = customizations.author;
+                    if (typeof author.avatarURL === "string") {
+                        botAvatars.BOT_AVATARS[author.avatar ?? author.avatarURL] = author.avatarURL;
+                        author.avatar ??= author.avatarURL;
+                        delete author.avatarURL;
+                    }
+                }
+            }
+
+            sendMessageProps.receiveMessage(finalMessage.channel_id, finalMessage);
+            return finalMessage;
         };
     }
 
-    const EMBED_COLOR = () => parseInt("0xFF4500", 16); // Set to Reddit orange
-    const authorMods = {
-        author: {
-            username: "FeetBot",
-            avatar: "command",
-            avatarURL: "https://cdn.discordapp.com/embed/avatars/0.png" // Change URL as needed
-        },
-    };
+    const EMBED_COLOR = () => parseInt("0xFFFFFF"),
+        authorDetails = {
+            author: {
+                username: "Feet",
+                avatar: "command",
+                avatarURL: "https://cdn.discordapp.com/embed/avatars/1.png" // Example avatar URL
+            }
+        };
 
     let sendMessage;
     function botSendMessage() {
         if (window.sendMessage) return window.sendMessage(...arguments);
-        if (!sendMessage) sendMessage = createSendMessageFunction(vendetta);
+        if (!sendMessage) sendMessage = botMessageHandler(vendetta);
         return sendMessage(...arguments);
     }
 
@@ -48,7 +58,7 @@
         meta: vendetta.plugin,
         patches: [],
         onUnload() {
-            this.patches.forEach((unpatch) => unpatch());
+            this.patches.forEach((up) => up());
             this.patches = [];
         },
         onLoad() {
@@ -57,14 +67,14 @@
                     get(args, ctx) {
                         try {
                             const messageMods = {
-                                ...authorMods,
+                                ...authorDetails,
                                 interaction: {
                                     name: "/hello",
                                     user: h.findByStoreName("UserStore").getCurrentUser(),
                                 },
                             };
                             botSendMessage({
-                                loggingName: "Hello output message",
+                                loggingName: "FeetBot output message",
                                 channelId: ctx.channel.id,
                                 embeds: [
                                     {
@@ -93,7 +103,7 @@
                 }));
             } catch (e) {
                 console.error(e);
-                alert("There was an error while loading FeetBot\n" + e.stack);
+                alert("There was an error while loading the FeetBot\n" + e.stack);
             }
         },
     };
