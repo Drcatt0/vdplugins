@@ -1,82 +1,112 @@
 (function (c, p, y, d, u, r, w, b) {
     "use strict";
 
-    const { ScrollView: v } = u.General,
-        { FormSection: f, FormSwitchRow: F } = u.Forms,
-        g = d.findByProps("sendMessage"),
-        Settings = r.storage;
+    const { findByStoreName, findByProps } = d;
+    const { useState } = u.React;
+    const { FormSwitch, FormSection, FormTextInput, FormRow, FormDivider } = u.Forms;
 
-    /**
-     * Replace Twitter or X.com links with fxtwitter or vxtwitter.
-     */
-    function replaceTwitterLinks(content, type) {
-        return content.replace(
-            /https?:\/\/(www\.)?(twitter\.com|x\.com)\/\w+\/status\/\d+/gim,
-            `https://${type}.com`
+    const Settings = r.createProxy({ closeOnOpen: false, folders: {} });
+
+    const getFolders = findByStoreName("UserSettingsProtoStore").getGuildFolders;
+    const isFolderExpanded = findByStoreName("ExpandedGuildFolderStore").isFolderExpanded;
+    const toggleFolderExpand = findByProps("toggleGuildFolderExpand").toggleGuildFolderExpand;
+
+    const patchGuildFolders = () => {
+        const originalToggleFolderExpand = toggleFolderExpand;
+
+        toggleFolderExpand = (folderId) => {
+            if (Settings.closeOnOpen) {
+                const expandedFolders = getFolders().filter((f) => isFolderExpanded(f.folderId));
+                expandedFolders.forEach((f) => {
+                    if (f.folderId !== folderId) {
+                        originalToggleFolderExpand(f.folderId);
+                    }
+                });
+            }
+            originalToggleFolderExpand(folderId);
+        };
+    };
+
+    const FolderIconRow = ({ folder, onChange }) => {
+        const [icon, setIcon] = useState(Settings.folders[folder.folderId]?.icon || "");
+
+        const updateIcon = (newIcon) => {
+            setIcon(newIcon);
+            Settings.folders[folder.folderId] = { ...Settings.folders[folder.folderId], icon: newIcon };
+            onChange(folder.folderId, newIcon);
+        };
+
+        return (
+            <FormRow
+                label={folder.name || `Folder ${folder.folderId}`}
+                note="Set a custom icon for this folder."
+                trailing={
+                    <FormTextInput
+                        placeholder="Paste image link or upload"
+                        value={icon}
+                        onChange={updateIcon}
+                        style={{ flex: 1 }}
+                    />
+                }
+            />
         );
-    }
+    };
 
-    /**
-     * Plugin settings page.
-     */
-    function SettingsPage() {
-        return w.useProxy(Settings),
-            React.createElement(v, null,
-                React.createElement(f, { title: "Plugin Settings", titleStyleType: "no_border" }),
-                React.createElement(F, {
-                    label: "Use vxtwitter.com instead of fxtwitter.com",
-                    subLabel: "Toggle between vxtwitter and fxtwitter for link replacement.",
-                    value: Settings.getBoolean("_vxtwitter", false),
-                    onValueChange: function (value) {
-                        Settings.set("_vxtwitter", value);
-                        Settings.set("_twitterType", value ? "vxtwitter" : "fxtwitter");
-                        b.showToast({
-                            content: `Switched to ${Settings.get("_twitterType", "fxtwitter")}.`,
-                            duration: 2000,
-                        });
-                    },
-                })
-            );
-    }
+    const SettingsPanel = () => {
+        const [closeOnOpen, setCloseOnOpen] = useState(Settings.closeOnOpen);
+        const folders = getFolders().filter((f) => f.folderId); // Filter only folders
 
-    /**
-     * Patches for the plugin.
-     */
-    const Patcher = [];
+        const toggleCloseOnOpen = () => {
+            const newState = !closeOnOpen;
+            setCloseOnOpen(newState);
+            Settings.closeOnOpen = newState;
+        };
 
-    /**
-     * Patch the `sendMessage` function to replace Twitter links.
-     */
-    function patchSendMessage() {
-        const patch = g.before("sendMessage", function (_, args) {
-            const content = args[1]?.content;
-            if (!content) return;
+        const updateFolderIcon = (folderId, icon) => {
+            Settings.folders[folderId] = { ...Settings.folders[folderId], icon };
+        };
 
-            // Match Twitter/X.com links
-            const twitterLinks = content.match(/https?:\/\/(www\.)?(twitter\.com|x\.com)\/\w+\/status\/\d+/gim);
-            if (!twitterLinks) return;
+        return (
+            <FormSection title="BetterFolders Settings">
+                <FormSwitch
+                    label="Close other folders on open"
+                    note="Automatically close other folders when opening a new folder."
+                    value={closeOnOpen}
+                    onValueChange={toggleCloseOnOpen}
+                />
+                <FormDivider />
+                {folders.map((folder) => (
+                    <FolderIconRow key={folder.folderId} folder={folder} onChange={updateFolderIcon} />
+                ))}
+            </FormSection>
+        );
+    };
 
-            const type = Settings.get("_twitterType", "fxtwitter");
-            args[1].content = replaceTwitterLinks(content, type);
+    const applyCustomIcons = () => {
+        const guildFolders = getFolders();
+
+        guildFolders.forEach((folder) => {
+            const customIcon = Settings.folders[folder.folderId]?.icon;
+
+            if (customIcon) {
+                // Patch the UI to display custom icons (example implementation, dependent on UI structure)
+                // Implement logic to patch folder rendering with custom icons
+            }
         });
+    };
 
-        Patcher.push(patch);
-    }
+    const onLoad = () => {
+        patchGuildFolders();
+        applyCustomIcons();
+    };
+
+    const onUnload = () => {
+        toggleFolderExpand = findByProps("toggleGuildFolderExpand").toggleGuildFolderExpand; // Restore original function
+    };
 
     return {
-        onLoad() {
-            try {
-                if (!Settings.get("_twitterType", false)) {
-                    Settings.set("_twitterType", "fxtwitter");
-                }
-                patchSendMessage();
-            } catch (err) {
-                console.error("[TwitterEmbed Error]", err);
-            }
-        },
-        onUnload() {
-            Patcher.forEach(unpatch => unpatch());
-        },
-        settings: SettingsPage,
+        onLoad,
+        onUnload,
+        SettingsPanel,
     };
-})({}, vendetta.commands, vendetta, vendetta.metro, vendetta.ui.components, vendetta.plugin, vendetta.storage, vendetta.ui.toasts);
+})(vendetta.plugin, vendetta.metro, vendetta.ui, vendetta.storage, vendetta.ui.components);
