@@ -23,3 +23,7 @@ Let me google that, adds a slash command to easily send a search link through lm
 [GotFeet](https://drcatt0.github.io/vdplugins/GotFeet/)
 
 Gotfeet ported from Enmity
+
+[Sauce](https://drcatt0.github.io/vdplugins/Sauce/)
+
+Longpress on a message with a photo to look up on sauceNAO
