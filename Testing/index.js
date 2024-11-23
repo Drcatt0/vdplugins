@@ -1,81 +1,84 @@
-(function (plugin, commands, metro, common) {
+(function (f, $, h) {
     "use strict";
 
-    // Import necessary Vendetta utilities and stores
-    const { findByProps } = metro;
-    const GuildStore = findByProps("getGuilds", "getGuild");
-    const LeaveGuild = findByProps("leaveGuild");
+    // Enum Definitions
+    var CommandType;
+    (function (e) {
+        e[(e.BUILT_IN = 0)] = "BUILT_IN";
+        e[(e.BUILT_IN_TEXT = 1)] = "BUILT_IN_TEXT";
+        e[(e.BUILT_IN_INTEGRATION = 2)] = "BUILT_IN_INTEGRATION";
+        e[(e.BOT = 3)] = "BOT";
+        e[(e.PLACEHOLDER = 4)] = "PLACEHOLDER";
+    })(CommandType || (CommandType = {}));
 
-    let registeredCommands = [];
+    var OptionType;
+    (function (e) {
+        e[(e.SUB_COMMAND = 1)] = "SUB_COMMAND";
+        e[(e.SUB_COMMAND_GROUP = 2)] = "SUB_COMMAND_GROUP";
+        e[(e.STRING = 3)] = "STRING";
+        e[(e.INTEGER = 4)] = "INTEGER";
+        e[(e.BOOLEAN = 5)] = "BOOLEAN";
+        e[(e.USER = 6)] = "USER";
+        e[(e.CHANNEL = 7)] = "CHANNEL";
+        e[(e.ROLE = 8)] = "ROLE";
+        e[(e.MENTIONABLE = 9)] = "MENTIONABLE";
+        e[(e.NUMBER = 10)] = "NUMBER";
+        e[(e.ATTACHMENT = 11)] = "ATTACHMENT";
+    })(OptionType || (OptionType = {}));
 
-    const onLoad = () => {
-        registeredCommands.push(
-            commands.registerCommand({
+    var CommandContext;
+    (function (e) {
+        e[(e.CHAT = 1)] = "CHAT";
+        e[(e.USER = 2)] = "USER";
+        e[(e.MESSAGE = 3)] = "MESSAGE";
+    })(CommandContext || (CommandContext = {}));
+
+    // Command Registration
+    let RegisteredCommands = [];
+
+    const RegisterCommands = function () {
+        RegisteredCommands.push(
+            $.registerCommand({
                 name: "leaveall",
                 displayName: "leaveall",
                 description: "Leave all joined servers.",
                 displayDescription: "Leave all joined servers.",
-                type: 1, // CHAT command type
-                inputType: 1, // BUILT_IN_TEXT
+                type: CommandContext.CHAT,
+                inputType: CommandType.BUILT_IN_TEXT,
                 applicationId: "-1",
                 options: [],
-                async execute() {
+                async execute(args) {
                     try {
+                        const GuildStore = h.findByProps("getGuilds", "getGuild");
+                        const LeaveGuild = h.findByProps("leaveGuild");
                         const guilds = Object.keys(GuildStore.getGuilds());
+
                         if (guilds.length === 0) {
                             return { content: "You are not in any servers." };
                         }
 
-                        // Notify the user that the process is starting
-                        return {
-                            content: `You are in ${guilds.length} server(s). Are you sure you want to leave all?`,
-                            components: [
-                                {
-                                    type: 1,
-                                    components: [
-                                        {
-                                            type: 2,
-                                            label: "Confirm",
-                                            style: 4, // Danger style
-                                            custom_id: "leaveall_confirm",
-                                        },
-                                    ],
-                                },
-                            ],
-                            async executeCustom(id, interaction) {
-                                if (id !== "leaveall_confirm") return;
+                        for (const guildId of guilds) {
+                            try {
+                                await LeaveGuild.leaveGuild(guildId);
+                            } catch (err) {
+                                console.error(`Failed to leave guild ${guildId}:`, err);
+                            }
+                        }
 
-                                for (const guildId of guilds) {
-                                    try {
-                                        await LeaveGuild.leaveGuild(guildId);
-                                    } catch (err) {
-                                        console.error(`Failed to leave guild ${guildId}:`, err);
-                                    }
-                                }
-
-                                interaction.update({
-                                    content: "Successfully left all servers.",
-                                    components: [],
-                                });
-                            },
-                        };
+                        return { content: "Successfully left all servers." };
                     } catch (error) {
                         console.error("Error leaving servers:", error);
-                        return {
-                            content:
-                                "An error occurred while leaving servers. Check the console for details.",
-                        };
+                        return { content: "An error occurred while leaving servers. Check the console for details." };
                     }
                 },
             })
         );
     };
 
-    const onUnload = () => {
-        for (const unregister of registeredCommands) unregister();
-        registeredCommands = [];
+    const UnregisterCommands = function () {
+        for (const command of RegisteredCommands) command();
     };
 
-    plugin.onLoad = onLoad;
-    plugin.onUnload = onUnload;
-})(vendetta.plugin, vendetta.commands, vendetta.metro, vendetta.metro.common);
+    // Plugin Lifecycle
+    return (f.onLoad = RegisterCommands), (f.onUnload = UnregisterCommands), f;
+})({}, vendetta.commands, vendetta.metro, vendetta.metro.common);
