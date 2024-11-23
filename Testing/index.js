@@ -1,129 +1,66 @@
-(function (p, r, s, e, u, D, S) {
+(function(f, g, h) {
     "use strict";
 
-    const { getGuildFolders } = s.findByStoreName("UserSettingsProtoStore");
-    const { isFolderExpanded } = s.findByStoreName("ExpandedGuildFolderStore");
-    const { FormRow, FormTextInput, FormSwitch, FormSection, FormFileRow } = D.Forms;
-    const { ScrollView } = e.ReactNative;
-    const { useState } = e.React;
+    const { General, Forms, Alerts } = h.ui;
+    const { ScrollView, View } = General;
+    const { FormRow, FormSection, FormIcon } = Forms;
+    const { launchImageLibrary } = g.findByProps("launchImageLibrary");
+    const FolderComponent = g.findByProps("folderIcon");
+    const patcher = h.patcher;
 
-    // Initialize storage for settings
-    r.storage.folderIcons ??= {};
-    r.storage.autoCollapse ??= true;
+    // Plugin settings storage
+    const settings = {
+        image: null, // Base64 image URL
+    };
 
-    /**
-     * Toggles the auto-collapse functionality for guild folders.
-     */
-    function toggleAutoCollapse() {
-        const expandedFolders = getGuildFolders().filter((folder) => folder.folderId && isFolderExpanded(folder.folderId));
-        if (expandedFolders.length > 1) {
-            expandedFolders.slice(1).forEach((folder) => {
-                e.FluxDispatcher.dispatch({ type: "TOGGLE_GUILD_FOLDER_EXPAND", folderId: folder.folderId });
-            });
-        }
-    }
-
-    /**
-     * Applies custom folder icons from storage to the guild folders.
-     */
-    function applyCustomIcons() {
-        const folders = getGuildFolders();
-        folders.forEach((folder) => {
-            const customIcon = r.storage.folderIcons[folder.folderId];
-            if (customIcon) {
-                // Dispatch custom actions to update folder UI
-                e.FluxDispatcher.dispatch({
-                    type: "SET_CUSTOM_FOLDER_ICON",
-                    folderId: folder.folderId,
-                    iconUrl: customIcon,
-                });
+    // Replace folder icons with the custom image
+    function replaceFolderIcons() {
+        patcher.before("renderFolder", FolderComponent, "folderIcon", (args) => {
+            if (settings.image) {
+                args[0].iconSource = { uri: settings.image };
             }
         });
     }
 
-    /**
-     * React component for folder settings row.
-     * @param {Object} folder The folder object.
-     */
-    const FolderSettingsRow = ({ folder }) => {
-        const [icon, setIcon] = useState(r.storage.folderIcons[folder.folderId] || "");
-
-        const handleIconChange = (value) => {
-            setIcon(value);
-            r.storage.folderIcons[folder.folderId] = value;
-            applyCustomIcons();
-        };
-
+    // Plugin settings page
+    function SettingsPage() {
         return (
-            <FormRow
-                label={`Folder: ${folder.name || `Unnamed (${folder.folderId})`}`}
-                trailing={
-                    <>
-                        <FormTextInput
-                            placeholder="Paste icon URL"
-                            value={icon}
-                            onChange={handleIconChange}
-                        />
-                        <FormFileRow
-                            label="Upload Icon"
-                            onUpload={(file) => {
-                                const reader = new FileReader();
-                                reader.onload = (event) => {
-                                    const fileDataUrl = event.target.result;
-                                    setIcon(fileDataUrl);
-                                    r.storage.folderIcons[folder.folderId] = fileDataUrl;
-                                    applyCustomIcons();
-                                };
-                                reader.readAsDataURL(file);
-                            }}
-                        />
-                    </>
-                }
-            />
-        );
-    };
-
-    /**
-     * Settings page for managing plugin options.
-     */
-    function SettingsPanel() {
-        const folders = getGuildFolders().filter((folder) => folder.folderId);
-
-        return (
-            <ScrollView style={{ flex: 1, marginTop: 10 }}>
-                <FormSection title="Folder Settings">
+            <ScrollView>
+                <FormSection title="Folder Icon Settings">
                     <FormRow
-                        label="Auto Collapse Folders"
-                        subLabel="Automatically collapse other folders when expanding one."
-                        trailing={
-                            <FormSwitch
-                                value={r.storage.autoCollapse}
-                                onValueChange={() => {
-                                    r.storage.autoCollapse = !r.storage.autoCollapse;
-                                }}
-                            />
-                        }
+                        label="Upload Folder Icon"
+                        onPress={() => {
+                            launchImageLibrary({}, (response) => {
+                                if (!response || response.didCancel || response.error) return;
+                                const base64Image = `data:image/jpeg;base64,${response.data}`;
+                                settings.image = base64Image;
+                                Alerts.showToast("Folder Icon Updated!");
+                            });
+                        }}
+                        leading={<FormIcon source={{ uri: settings.image || "ic_add_24px" }} />}
                     />
-                </FormSection>
-                <FormSection title="Custom Folder Icons">
-                    {folders.map((folder) => (
-                        <FolderSettingsRow key={folder.folderId} folder={folder} />
-                    ))}
+                    <FormRow
+                        label="Clear Icon"
+                        onPress={() => {
+                            settings.image = null;
+                            Alerts.showToast("Folder Icon Cleared!");
+                        }}
+                    />
                 </FormSection>
             </ScrollView>
         );
     }
 
-    var plugin = {
-        onLoad: function () {
-            e.FluxDispatcher.subscribe("TOGGLE_GUILD_FOLDER_EXPAND", toggleAutoCollapse);
-            applyCustomIcons();
-        },
-        onUnload: function () {
-            e.FluxDispatcher.unsubscribe("TOGGLE_GUILD_FOLDER_EXPAND", toggleAutoCollapse);
-        },
-        settings: SettingsPanel,
+    // Plugin lifecycle
+    f.onLoad = function() {
+        replaceFolderIcons();
     };
 
-    return (p.default = plugin), Object.defineProperty(p, "__esModule", { value: true }), p;
-})({}, vendetta.plugin, vendetta.metro, vendetta.metro.common, vendetta.ui.assets, vendetta.ui.components, vendetta.storage);
+    f.onUnload = function() {
+        patcher.unpatchAll("renderFolder");
+    };
+
+    f.settings = SettingsPage;
+
+    return f;
+})(vendetta.plugin, vendetta.metro, vendetta);
