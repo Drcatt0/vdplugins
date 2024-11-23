@@ -1,22 +1,22 @@
-(function(f, g, h) {
+(function(f, g, h, d, u, r, w, b) {
     "use strict";
 
+    const { ScrollView } = u.General;
+    const { FormSection, FormRow, FormIcon } = u.Forms;
     const patcher = h.patcher;
-    const FolderRenderer = g.findByProps("renderFolderIcon");
-    const settings = h.storage || { image: null };
+    const FolderRenderer = d.findByProps("renderFolderIcon");
+    const ImagePicker = d.findByProps("launchImageLibrary");
 
-    function debugHook() {
+    // Settings storage
+    const settings = r.storage || { image: null };
+
+    function patchFolderIcons() {
         if (!FolderRenderer || !FolderRenderer.default) {
-            console.error("[FolderIconChanger] FolderRenderer not found.");
-            h.ui.alerts.showToast("FolderRenderer not found.");
+            u.alerts.showToast("FolderRenderer not found.");
             return;
         }
 
-        console.log("[FolderIconChanger] Patching FolderRenderer...");
-        h.ui.alerts.showToast("Patching FolderRenderer...");
-
         patcher.after("renderFolderIcon", FolderRenderer, "default", (args, res) => {
-            console.log("[FolderIconChanger] renderFolderIcon called.");
             if (settings.image) {
                 res.props.children = h.React.createElement("img", {
                     src: settings.image,
@@ -33,39 +33,43 @@
 
     function SettingsPage() {
         return h.React.createElement(
-            h.ui.ScrollView,
+            ScrollView,
             null,
             h.React.createElement(
-                h.ui.Forms.FormSection,
+                FormSection,
                 { title: "Folder Icon Settings" },
-                h.React.createElement(h.ui.Forms.FormRow, {
-                    label: "Set Folder Icon",
+                h.React.createElement(FormRow, {
+                    label: "Upload Folder Icon",
+                    leading: h.React.createElement(FormIcon, {
+                        source: { uri: settings.image || "ic_add_24px" },
+                    }),
                     onPress: () => {
-                        settings.image = "https://via.placeholder.com/100"; // Placeholder for testing
-                        h.ui.alerts.showToast("Folder icon set!");
+                        ImagePicker.launchImageLibrary({}, (response) => {
+                            if (!response || response.didCancel || response.error) return;
+                            settings.image = `data:image/jpeg;base64,${response.data}`;
+                            u.alerts.showToast("Folder icon uploaded successfully!");
+                        });
                     },
                 }),
-                h.React.createElement(h.ui.Forms.FormRow, {
+                h.React.createElement(FormRow, {
                     label: "Clear Folder Icon",
                     onPress: () => {
                         settings.image = null;
-                        h.ui.alerts.showToast("Folder icon cleared.");
+                        u.alerts.showToast("Folder icon cleared.");
                     },
                 })
             )
         );
     }
 
-    f.onLoad = () => {
-        console.log("[FolderIconChanger] Plugin loaded.");
-        debugHook();
+    // Plugin lifecycle methods
+    const onLoad = () => {
+        patchFolderIcons();
     };
 
-    f.onUnload = () => {
+    const onUnload = () => {
         patcher.unpatchAll("renderFolderIcon");
-        console.log("[FolderIconChanger] Plugin unloaded.");
     };
 
-    f.settings = SettingsPage;
-
-})(vendetta.plugin, vendetta.metro, vendetta);
+    return (f.onLoad = onLoad), (f.onUnload = onUnload), (f.settings = SettingsPage), f;
+})({}, vendetta.plugin, vendetta, vendetta.metro, vendetta.ui.components, vendetta.storage, vendetta.ui.assets);
