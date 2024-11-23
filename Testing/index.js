@@ -1,22 +1,22 @@
-(function(p, r, s, e, u, D, S) {
+(function (p, r, s, e, u, D, S) {
     "use strict";
 
     const { getGuildFolders } = s.findByStoreName("UserSettingsProtoStore");
     const { isFolderExpanded } = s.findByStoreName("ExpandedGuildFolderStore");
-    const FluxDispatcher = e.FluxDispatcher;
-    const { FormRow, FormSwitch, FormTextInput } = D.Forms;
+    const { FormRow, FormTextInput, FormSwitch, FormIcon, FormSection, FormFileRow } = D.Forms;
     const { ScrollView } = e.ReactNative;
     const { useState } = e.React;
 
     // Initialize storage for settings
-    r.storage.autoCollapse ??= true;
     r.storage.folderIcons ??= {};
+    r.storage.autoCollapse ??= true;
 
+    // Toggle folder auto-collapse functionality
     function toggleAutoCollapse() {
         const expandedFolders = getGuildFolders().filter((folder) => folder.folderId && isFolderExpanded(folder.folderId));
         if (expandedFolders.length > 1) {
             expandedFolders.slice(1).forEach((folder) => {
-                FluxDispatcher.dispatch({ type: "TOGGLE_GUILD_FOLDER_EXPAND", folderId: folder.folderId });
+                e.FluxDispatcher.dispatch({ type: "TOGGLE_GUILD_FOLDER_EXPAND", folderId: folder.folderId });
             });
         }
     }
@@ -33,11 +33,9 @@
         folders.forEach((folder) => {
             const customIcon = r.storage.folderIcons[folder.folderId];
             if (customIcon) {
-                FluxDispatcher.dispatch({
-                    type: "CUSTOM_FOLDER_ICON_UPDATE",
-                    folderId: folder.folderId,
-                    icon: customIcon,
-                });
+                // Apply custom folder icons logic here
+                // Example: Dispatch a custom action to update folder UI (mocked)
+                console.log(`Applying custom icon for folder ${folder.folderId}: ${customIcon}`);
             }
         });
     }
@@ -55,11 +53,26 @@
             <FormRow
                 label={`Folder: ${folder.name || `Unnamed (${folder.folderId})`}`}
                 trailing={
-                    <FormTextInput
-                        placeholder="Paste icon URL"
-                        value={icon}
-                        onChange={handleIconChange}
-                    />
+                    <>
+                        <FormTextInput
+                            placeholder="Paste icon URL"
+                            value={icon}
+                            onChange={handleIconChange}
+                        />
+                        <FormFileRow
+                            label="Upload Icon"
+                            onUpload={(file) => {
+                                const reader = new FileReader();
+                                reader.onload = (event) => {
+                                    const fileDataUrl = event.target.result;
+                                    setIcon(fileDataUrl);
+                                    r.storage.folderIcons[folder.folderId] = fileDataUrl;
+                                    applyCustomIcons();
+                                };
+                                reader.readAsDataURL(file);
+                            }}
+                        />
+                    </>
                 }
             />
         );
@@ -70,35 +83,39 @@
 
         return (
             <ScrollView style={{ flex: 1, marginTop: 10 }}>
-                <FormRow
-                    label="Auto Collapse Folders"
-                    subLabel="Automatically collapse other folders when expanding one."
-                    trailing={
-                        <FormSwitch
-                            value={r.storage.autoCollapse}
-                            onValueChange={() => {
-                                r.storage.autoCollapse = !r.storage.autoCollapse;
-                            }}
-                        />
-                    }
-                />
-                {folders.map((folder) => (
-                    <FolderSettingsRow key={folder.folderId} folder={folder} />
-                ))}
+                <FormSection title="Folder Settings">
+                    <FormRow
+                        label="Auto Collapse Folders"
+                        subLabel="Automatically collapse other folders when expanding one."
+                        trailing={
+                            <FormSwitch
+                                value={r.storage.autoCollapse}
+                                onValueChange={() => {
+                                    r.storage.autoCollapse = !r.storage.autoCollapse;
+                                }}
+                            />
+                        }
+                    />
+                </FormSection>
+                <FormSection title="Custom Folder Icons">
+                    {folders.map((folder) => (
+                        <FolderSettingsRow key={folder.folderId} folder={folder} />
+                    ))}
+                </FormSection>
             </ScrollView>
         );
     }
 
     var plugin = {
         onLoad: function () {
-            FluxDispatcher.subscribe("TOGGLE_GUILD_FOLDER_EXPAND", onFolderToggle);
+            e.FluxDispatcher.subscribe("TOGGLE_GUILD_FOLDER_EXPAND", onFolderToggle);
             applyCustomIcons();
         },
         onUnload: function () {
-            FluxDispatcher.unsubscribe("TOGGLE_GUILD_FOLDER_EXPAND", onFolderToggle);
+            e.FluxDispatcher.unsubscribe("TOGGLE_GUILD_FOLDER_EXPAND", onFolderToggle);
         },
         settings: SettingsPanel,
     };
 
-    return (p.default = plugin), Object.defineProperty(p, "__esModule", { value: !0 }), p;
+    return (p.default = plugin), Object.defineProperty(p, "__esModule", { value: true }), p;
 })({}, vendetta.plugin, vendetta.metro, vendetta.metro.common, vendetta.ui.assets, vendetta.ui.components, vendetta.storage);
