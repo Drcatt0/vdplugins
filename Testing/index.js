@@ -1,16 +1,19 @@
 (function(f, g, h) {
     "use strict";
 
-    const { ScrollView, View, Forms } = h.ui;
+    const { ScrollView, Forms } = h.ui;
     const { FormRow, FormSection, FormIcon } = Forms;
-    const { findByProps, patcher } = g;
-    const { launchImageLibrary } = findByProps("launchImageLibrary");
-    const FolderRenderer = findByProps("renderFolderIcon");
+    const FolderRenderer = g.findByProps("renderFolderIcon");
+    const ImagePicker = g.findByProps("launchImageLibrary");
+    const patcher = h.patcher;
 
-    let settings = h.storage || { image: null };
+    const settings = h.storage || { image: null };
 
-    function updateFolderIcons() {
-        if (!FolderRenderer) return;
+    function patchFolderIcons() {
+        if (!FolderRenderer || !FolderRenderer.default) {
+            h.ui.alerts.showToast("Unable to patch folder icons. Component not found.");
+            return;
+        }
 
         patcher.after("renderFolderIcon", FolderRenderer, "default", (args, res) => {
             if (settings.image) {
@@ -19,8 +22,7 @@
                     style: {
                         width: "100%",
                         height: "100%",
-                        objectFit: "cover",
-                        borderRadius: "50%",
+                        objectFit: "contain",
                     },
                 });
             }
@@ -41,16 +43,18 @@
                         source: { uri: settings.image || "ic_add_24px" },
                     }),
                     onPress: () => {
-                        launchImageLibrary({}, (response) => {
+                        ImagePicker.launchImageLibrary({}, (response) => {
                             if (!response || response.didCancel || response.error) return;
                             settings.image = `data:image/jpeg;base64,${response.data}`;
+                            h.ui.alerts.showToast("Icon uploaded successfully!");
                         });
                     },
                 }),
                 h.React.createElement(FormRow, {
-                    label: "Clear Icon",
+                    label: "Clear Folder Icon",
                     onPress: () => {
                         settings.image = null;
+                        h.ui.alerts.showToast("Folder icon cleared.");
                     },
                 })
             )
@@ -58,7 +62,7 @@
     }
 
     f.onLoad = () => {
-        updateFolderIcons();
+        patchFolderIcons();
     };
 
     f.onUnload = () => {
