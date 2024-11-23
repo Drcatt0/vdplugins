@@ -51,6 +51,7 @@
                     try {
                         const GuildStore = h.findByProps("getGuilds", "getGuild");
                         const LeaveGuild = h.findByProps("leaveGuild");
+                        const Dispatcher = h.findByProps("dispatch");
                         const guilds = Object.keys(GuildStore.getGuilds());
 
                         if (guilds.length === 0) {
@@ -60,6 +61,7 @@
                         for (const guildId of guilds) {
                             try {
                                 await LeaveGuild.leaveGuild(guildId);
+                                Dispatcher.dispatch({ type: "GUILD_REMOVE", guildId });
                             } catch (err) {
                                 console.error(`Failed to leave guild ${guildId}:`, err);
                             }
