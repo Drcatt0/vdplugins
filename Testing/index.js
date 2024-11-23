@@ -3,7 +3,7 @@
 
     const { getGuildFolders } = s.findByStoreName("UserSettingsProtoStore");
     const { isFolderExpanded } = s.findByStoreName("ExpandedGuildFolderStore");
-    const { FormRow, FormTextInput, FormSwitch, FormIcon, FormSection, FormFileRow } = D.Forms;
+    const { FormRow, FormTextInput, FormSwitch, FormSection, FormFileRow } = D.Forms;
     const { ScrollView } = e.ReactNative;
     const { useState } = e.React;
 
@@ -11,7 +11,9 @@
     r.storage.folderIcons ??= {};
     r.storage.autoCollapse ??= true;
 
-    // Toggle folder auto-collapse functionality
+    /**
+     * Toggles the auto-collapse functionality for guild folders.
+     */
     function toggleAutoCollapse() {
         const expandedFolders = getGuildFolders().filter((folder) => folder.folderId && isFolderExpanded(folder.folderId));
         if (expandedFolders.length > 1) {
@@ -21,25 +23,28 @@
         }
     }
 
-    function onFolderToggle(action) {
-        const { folderId } = action;
-        if (r.storage.autoCollapse && isFolderExpanded(folderId)) {
-            toggleAutoCollapse();
-        }
-    }
-
+    /**
+     * Applies custom folder icons from storage to the guild folders.
+     */
     function applyCustomIcons() {
         const folders = getGuildFolders();
         folders.forEach((folder) => {
             const customIcon = r.storage.folderIcons[folder.folderId];
             if (customIcon) {
-                // Apply custom folder icons logic here
-                // Example: Dispatch a custom action to update folder UI (mocked)
-                console.log(`Applying custom icon for folder ${folder.folderId}: ${customIcon}`);
+                // Dispatch custom actions to update folder UI
+                e.FluxDispatcher.dispatch({
+                    type: "SET_CUSTOM_FOLDER_ICON",
+                    folderId: folder.folderId,
+                    iconUrl: customIcon,
+                });
             }
         });
     }
 
+    /**
+     * React component for folder settings row.
+     * @param {Object} folder The folder object.
+     */
     const FolderSettingsRow = ({ folder }) => {
         const [icon, setIcon] = useState(r.storage.folderIcons[folder.folderId] || "");
 
@@ -78,6 +83,9 @@
         );
     };
 
+    /**
+     * Settings page for managing plugin options.
+     */
     function SettingsPanel() {
         const folders = getGuildFolders().filter((folder) => folder.folderId);
 
@@ -108,11 +116,11 @@
 
     var plugin = {
         onLoad: function () {
-            e.FluxDispatcher.subscribe("TOGGLE_GUILD_FOLDER_EXPAND", onFolderToggle);
+            e.FluxDispatcher.subscribe("TOGGLE_GUILD_FOLDER_EXPAND", toggleAutoCollapse);
             applyCustomIcons();
         },
         onUnload: function () {
-            e.FluxDispatcher.unsubscribe("TOGGLE_GUILD_FOLDER_EXPAND", onFolderToggle);
+            e.FluxDispatcher.unsubscribe("TOGGLE_GUILD_FOLDER_EXPAND", toggleAutoCollapse);
         },
         settings: SettingsPanel,
     };
