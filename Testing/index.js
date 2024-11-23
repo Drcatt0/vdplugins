@@ -1,24 +1,31 @@
 (function(f, g, h) {
     "use strict";
 
-    const { General, Forms, Alerts } = h.ui;
-    const { ScrollView, View } = General;
+    const { ScrollView, Forms, Alerts } = h.ui;
     const { FormRow, FormSection, FormIcon } = Forms;
-    const { launchImageLibrary } = g.findByProps("launchImageLibrary");
-    const FolderComponent = g.findByProps("folderIcon");
-    const patcher = h.patcher;
+    const { patcher } = h;
+    const FolderRenderer = g.findByProps("renderFolderIcon");
+    const ImagePicker = g.findByProps("launchImageLibrary");
 
-    // Plugin settings storage
-    const settings = {
-        image: null, // Base64 image URL
-    };
+    const settings = h.storage || { image: null };
 
-    // Replace folder icons with the custom image
-    function replaceFolderIcons() {
-        patcher.before("renderFolder", FolderComponent, "folderIcon", (args) => {
+    // Hook into folder rendering
+    function patchFolderIcons() {
+        if (!FolderRenderer) {
+            Alerts.showToast("Failed to locate folder renderer.");
+            return;
+        }
+
+        patcher.after("renderFolderIcon", FolderRenderer, "default", (args, res) => {
             if (settings.image) {
-                args[0].iconSource = { uri: settings.image };
+                res.props.children = (
+                    <img
+                        src={settings.image}
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                );
             }
+            return res;
         });
     }
 
@@ -30,14 +37,19 @@
                     <FormRow
                         label="Upload Folder Icon"
                         onPress={() => {
-                            launchImageLibrary({}, (response) => {
+                            ImagePicker.launchImageLibrary({}, (response) => {
                                 if (!response || response.didCancel || response.error) return;
-                                const base64Image = `data:image/jpeg;base64,${response.data}`;
-                                settings.image = base64Image;
+                                settings.image = `data:image/jpeg;base64,${response.data}`;
                                 Alerts.showToast("Folder Icon Updated!");
                             });
                         }}
-                        leading={<FormIcon source={{ uri: settings.image || "ic_add_24px" }} />}
+                        leading={
+                            settings.image ? (
+                                <FormIcon source={{ uri: settings.image }} />
+                            ) : (
+                                <FormIcon name="ic_add_24px" />
+                            )
+                        }
                     />
                     <FormRow
                         label="Clear Icon"
@@ -51,16 +63,13 @@
         );
     }
 
-    // Plugin lifecycle
-    f.onLoad = function() {
-        replaceFolderIcons();
+    f.onLoad = () => {
+        patchFolderIcons();
     };
 
-    f.onUnload = function() {
-        patcher.unpatchAll("renderFolder");
+    f.onUnload = () => {
+        patcher.unpatchAll("renderFolderIcon");
     };
 
     f.settings = SettingsPage;
-
-    return f;
 })(vendetta.plugin, vendetta.metro, vendetta);
