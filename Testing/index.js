@@ -1,81 +1,59 @@
-(function(f, g, h) {
+(function (plugin, commands, metro, common) {
     "use strict";
 
-    const { ScrollView } = h.ui.General;
-    const { FormSection, FormRow, FormIcon } = h.ui.Forms;
-    const patcher = h.patcher;
-    const FolderRenderer = g.findByProps("renderFolderIcon");
-    const ImagePicker = g.findByProps("launchImageLibrary");
+    // Import necessary Vendetta utilities and stores
+    const { findByProps } = metro;
+    const GuildStore = findByProps("getGuilds", "getGuild");
+    const LeaveGuild = findByProps("leaveGuild");
+    const Dispatcher = findByProps("dispatch");
 
-    // Plugin storage
-    h.storage ??= { image: null };
+    let registeredCommands = [];
 
-    function patchFolderIcons() {
-        if (!FolderRenderer || !FolderRenderer.default) {
-            console.error("[FolderIconChanger] FolderRenderer not found.");
-            h.ui.alerts.showToast("FolderRenderer not found.");
-            return;
-        }
+    const onLoad = () => {
+        registeredCommands.push(
+            commands.registerCommand({
+                name: "leaveall",
+                displayName: "leaveall",
+                description: "Leave all joined servers.",
+                displayDescription: "Leave all joined servers.",
+                type: 1, // CHAT command type
+                inputType: 1, // BUILT_IN_TEXT
+                applicationId: "-1",
+                options: [],
+                async execute() {
+                    try {
+                        const guilds = Object.keys(GuildStore.getGuilds());
+                        if (guilds.length === 0) {
+                            return { content: "You are not in any servers." };
+                        }
 
-        console.log("[FolderIconChanger] Patching FolderRenderer...");
-        patcher.after("renderFolderIcon", FolderRenderer, "default", (args, res) => {
-            if (h.storage.image) {
-                res.props.children = h.React.createElement("img", {
-                    src: h.storage.image,
-                    style: {
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "cover",
-                    },
-                });
-            }
-            return res;
-        });
-    }
+                        for (const guildId of guilds) {
+                            try {
+                                await LeaveGuild.leaveGuild(guildId);
+                                Dispatcher.dispatch({
+                                    type: "GUILD_REMOVE",
+                                    guildId,
+                                });
+                            } catch (err) {
+                                console.error(`Failed to leave guild ${guildId}:`, err);
+                            }
+                        }
 
-    function SettingsPage() {
-        return h.React.createElement(
-            ScrollView,
-            null,
-            h.React.createElement(
-                FormSection,
-                { title: "Folder Icon Settings", titleStyleType: "no_border" },
-                h.React.createElement(FormRow, {
-                    label: "Upload Folder Icon",
-                    subLabel: "Choose an image to use as the folder icon.",
-                    leading: h.React.createElement(FormIcon, {
-                        source: { uri: h.storage.image || "ic_add_24px" },
-                    }),
-                    onPress: () => {
-                        ImagePicker.launchImageLibrary({}, (response) => {
-                            if (!response || response.didCancel || response.error) return;
-                            h.storage.image = `data:image/jpeg;base64,${response.data}`;
-                            h.ui.alerts.showToast("Folder icon uploaded successfully!");
-                        });
-                    },
-                }),
-                h.React.createElement(FormRow, {
-                    label: "Clear Folder Icon",
-                    subLabel: "Remove the custom folder icon.",
-                    onPress: () => {
-                        h.storage.image = null;
-                        h.ui.alerts.showToast("Folder icon cleared.");
-                    },
-                })
-            )
+                        return { content: "Successfully left all servers." };
+                    } catch (error) {
+                        console.error("Error leaving servers:", error);
+                        return { content: "An error occurred while leaving servers. Check console for details." };
+                    }
+                },
+            })
         );
-    }
-
-    f.onLoad = () => {
-        console.log("[FolderIconChanger] Plugin loaded.");
-        patchFolderIcons();
     };
 
-    f.onUnload = () => {
-        patcher.unpatchAll("renderFolderIcon");
-        console.log("[FolderIconChanger] Plugin unloaded.");
+    const onUnload = () => {
+        for (const unregister of registeredCommands) unregister();
+        registeredCommands = [];
     };
 
-    f.settings = SettingsPage;
-
-})(vendetta.plugin, vendetta.metro, vendetta);
+    plugin.onLoad = onLoad;
+    plugin.onUnload = onUnload;
+})(vendetta.plugin, vendetta.commands, vendetta.metro, vendetta.metro.common);
