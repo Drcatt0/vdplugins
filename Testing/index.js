@@ -1,28 +1,29 @@
 (function(f, g, h) {
     "use strict";
 
-    const { ScrollView, Forms } = h.ui;
-    const { FormRow, FormSection, FormIcon } = Forms;
-    const FolderRenderer = g.findByProps("renderFolderIcon");
-    const ImagePicker = g.findByProps("launchImageLibrary");
     const patcher = h.patcher;
-
+    const FolderRenderer = g.findByProps("renderFolderIcon");
     const settings = h.storage || { image: null };
 
-    function patchFolderIcons() {
+    function debugHook() {
         if (!FolderRenderer || !FolderRenderer.default) {
-            h.ui.alerts.showToast("Unable to patch folder icons. Component not found.");
+            console.error("[FolderIconChanger] FolderRenderer not found.");
+            h.ui.alerts.showToast("FolderRenderer not found.");
             return;
         }
 
+        console.log("[FolderIconChanger] Patching FolderRenderer...");
+        h.ui.alerts.showToast("Patching FolderRenderer...");
+
         patcher.after("renderFolderIcon", FolderRenderer, "default", (args, res) => {
+            console.log("[FolderIconChanger] renderFolderIcon called.");
             if (settings.image) {
                 res.props.children = h.React.createElement("img", {
                     src: settings.image,
                     style: {
                         width: "100%",
                         height: "100%",
-                        objectFit: "contain",
+                        objectFit: "cover",
                     },
                 });
             }
@@ -32,25 +33,19 @@
 
     function SettingsPage() {
         return h.React.createElement(
-            ScrollView,
+            h.ui.ScrollView,
             null,
             h.React.createElement(
-                FormSection,
+                h.ui.Forms.FormSection,
                 { title: "Folder Icon Settings" },
-                h.React.createElement(FormRow, {
-                    label: "Upload Folder Icon",
-                    leading: h.React.createElement(FormIcon, {
-                        source: { uri: settings.image || "ic_add_24px" },
-                    }),
+                h.React.createElement(h.ui.Forms.FormRow, {
+                    label: "Set Folder Icon",
                     onPress: () => {
-                        ImagePicker.launchImageLibrary({}, (response) => {
-                            if (!response || response.didCancel || response.error) return;
-                            settings.image = `data:image/jpeg;base64,${response.data}`;
-                            h.ui.alerts.showToast("Icon uploaded successfully!");
-                        });
+                        settings.image = "https://via.placeholder.com/100"; // Placeholder for testing
+                        h.ui.alerts.showToast("Folder icon set!");
                     },
                 }),
-                h.React.createElement(FormRow, {
+                h.React.createElement(h.ui.Forms.FormRow, {
                     label: "Clear Folder Icon",
                     onPress: () => {
                         settings.image = null;
@@ -62,11 +57,13 @@
     }
 
     f.onLoad = () => {
-        patchFolderIcons();
+        console.log("[FolderIconChanger] Plugin loaded.");
+        debugHook();
     };
 
     f.onUnload = () => {
         patcher.unpatchAll("renderFolderIcon");
+        console.log("[FolderIconChanger] Plugin unloaded.");
     };
 
     f.settings = SettingsPage;
