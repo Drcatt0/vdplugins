@@ -5,7 +5,6 @@
     const { findByProps } = metro;
     const GuildStore = findByProps("getGuilds", "getGuild");
     const LeaveGuild = findByProps("leaveGuild");
-    const Dispatcher = findByProps("dispatch");
 
     let registeredCommands = [];
 
@@ -27,22 +26,45 @@
                             return { content: "You are not in any servers." };
                         }
 
-                        for (const guildId of guilds) {
-                            try {
-                                await LeaveGuild.leaveGuild(guildId);
-                                Dispatcher.dispatch({
-                                    type: "GUILD_REMOVE",
-                                    guildId,
-                                });
-                            } catch (err) {
-                                console.error(`Failed to leave guild ${guildId}:`, err);
-                            }
-                        }
+                        // Notify the user that the process is starting
+                        return {
+                            content: `You are in ${guilds.length} server(s). Are you sure you want to leave all?`,
+                            components: [
+                                {
+                                    type: 1,
+                                    components: [
+                                        {
+                                            type: 2,
+                                            label: "Confirm",
+                                            style: 4, // Danger style
+                                            custom_id: "leaveall_confirm",
+                                        },
+                                    ],
+                                },
+                            ],
+                            async executeCustom(id, interaction) {
+                                if (id !== "leaveall_confirm") return;
 
-                        return { content: "Successfully left all servers." };
+                                for (const guildId of guilds) {
+                                    try {
+                                        await LeaveGuild.leaveGuild(guildId);
+                                    } catch (err) {
+                                        console.error(`Failed to leave guild ${guildId}:`, err);
+                                    }
+                                }
+
+                                interaction.update({
+                                    content: "Successfully left all servers.",
+                                    components: [],
+                                });
+                            },
+                        };
                     } catch (error) {
                         console.error("Error leaving servers:", error);
-                        return { content: "An error occurred while leaving servers. Check console for details." };
+                        return {
+                            content:
+                                "An error occurred while leaving servers. Check the console for details.",
+                        };
                     }
                 },
             })
