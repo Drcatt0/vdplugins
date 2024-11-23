@@ -1,24 +1,27 @@
-(function(c, p, y, d, u, r, w, b) {
+(function(f, g, h) {
     "use strict";
 
-    const { ScrollView } = u.General;
-    const { FormSection, FormRow, FormIcon } = u.Forms;
-    const ImagePicker = d.findByProps("launchImageLibrary");
-    const patcher = y.patcher;
-    const FolderRenderer = d.findByProps("renderFolderIcon");
+    const { ScrollView } = h.ui.General;
+    const { FormSection, FormRow, FormIcon } = h.ui.Forms;
+    const patcher = h.patcher;
+    const FolderRenderer = g.findByProps("renderFolderIcon");
+    const ImagePicker = g.findByProps("launchImageLibrary");
 
-    r.storage ??= { image: null };
+    // Plugin storage
+    h.storage ??= { image: null };
 
     function patchFolderIcons() {
         if (!FolderRenderer || !FolderRenderer.default) {
-            u.alerts.showToast("FolderRenderer not found.");
+            console.error("[FolderIconChanger] FolderRenderer not found.");
+            h.ui.alerts.showToast("FolderRenderer not found.");
             return;
         }
 
+        console.log("[FolderIconChanger] Patching FolderRenderer...");
         patcher.after("renderFolderIcon", FolderRenderer, "default", (args, res) => {
-            if (r.storage.image) {
-                res.props.children = React.createElement("img", {
-                    src: r.storage.image,
+            if (h.storage.image) {
+                res.props.children = h.React.createElement("img", {
+                    src: h.storage.image,
                     style: {
                         width: "100%",
                         height: "100%",
@@ -31,39 +34,48 @@
     }
 
     function SettingsPage() {
-        return React.createElement(
+        return h.React.createElement(
             ScrollView,
             null,
-            React.createElement(
+            h.React.createElement(
                 FormSection,
                 { title: "Folder Icon Settings", titleStyleType: "no_border" },
-                React.createElement(FormRow, {
+                h.React.createElement(FormRow, {
                     label: "Upload Folder Icon",
-                    subLabel: "Select an image to use as the folder icon.",
-                    leading: React.createElement(FormIcon, {
-                        source: { uri: r.storage.image || "ic_add_24px" },
+                    subLabel: "Choose an image to use as the folder icon.",
+                    leading: h.React.createElement(FormIcon, {
+                        source: { uri: h.storage.image || "ic_add_24px" },
                     }),
                     onPress: () => {
                         ImagePicker.launchImageLibrary({}, (response) => {
                             if (!response || response.didCancel || response.error) return;
-                            r.storage.image = `data:image/jpeg;base64,${response.data}`;
-                            u.alerts.showToast("Folder icon updated!");
+                            h.storage.image = `data:image/jpeg;base64,${response.data}`;
+                            h.ui.alerts.showToast("Folder icon uploaded successfully!");
                         });
+                    },
+                }),
+                h.React.createElement(FormRow, {
+                    label: "Clear Folder Icon",
+                    subLabel: "Remove the custom folder icon.",
+                    onPress: () => {
+                        h.storage.image = null;
+                        h.ui.alerts.showToast("Folder icon cleared.");
                     },
                 })
             )
         );
     }
 
-    const onLoad = () => {
+    f.onLoad = () => {
         console.log("[FolderIconChanger] Plugin loaded.");
         patchFolderIcons();
     };
 
-    const onUnload = () => {
+    f.onUnload = () => {
         patcher.unpatchAll("renderFolderIcon");
         console.log("[FolderIconChanger] Plugin unloaded.");
     };
 
-    return (c.onLoad = onLoad), (c.onUnload = onUnload), (c.settings = SettingsPage), c;
-})({}, vendetta.commands, vendetta, vendetta.metro, vendetta.ui.components, vendetta.plugin, vendetta.storage, vendetta.ui.assets);
+    f.settings = SettingsPage;
+
+})(vendetta.plugin, vendetta.metro, vendetta);
