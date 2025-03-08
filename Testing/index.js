@@ -4,8 +4,8 @@
     const { React } = v.metro.common;
     const ProfileModule = m.findByProps("openProfileSheet");
     const UserStore = m.findByProps("getCurrentUser");
-   const ChatInputActions = m.findByName("ChannelTextAreaButtons");
- // The component we are injecting into
+ const ChatInputActions = m.findByProps("render", "onSend");
+
 
     let unpatch;
 
