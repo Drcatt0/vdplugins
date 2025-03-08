@@ -1,86 +1,50 @@
-(function (f, $, h) {
+(function (plugin, v, m) {
     "use strict";
 
-    // Enum Definitions
-    var CommandType;
-    (function (e) {
-        e[(e.BUILT_IN = 0)] = "BUILT_IN";
-        e[(e.BUILT_IN_TEXT = 1)] = "BUILT_IN_TEXT";
-        e[(e.BUILT_IN_INTEGRATION = 2)] = "BUILT_IN_INTEGRATION";
-        e[(e.BOT = 3)] = "BOT";
-        e[(e.PLACEHOLDER = 4)] = "PLACEHOLDER";
-    })(CommandType || (CommandType = {}));
+    const { React } = v.metro.common;
+    const ProfileModule = m.findByProps("openProfileSheet");
+    const UserStore = m.findByProps("getCurrentUser");
+    const ChatInput = m.findByProps("ChatInput");
 
-    var OptionType;
-    (function (e) {
-        e[(e.SUB_COMMAND = 1)] = "SUB_COMMAND";
-        e[(e.SUB_COMMAND_GROUP = 2)] = "SUB_COMMAND_GROUP";
-        e[(e.STRING = 3)] = "STRING";
-        e[(e.INTEGER = 4)] = "INTEGER";
-        e[(e.BOOLEAN = 5)] = "BOOLEAN";
-        e[(e.USER = 6)] = "USER";
-        e[(e.CHANNEL = 7)] = "CHANNEL";
-        e[(e.ROLE = 8)] = "ROLE";
-        e[(e.MENTIONABLE = 9)] = "MENTIONABLE";
-        e[(e.NUMBER = 10)] = "NUMBER";
-        e[(e.ATTACHMENT = 11)] = "ATTACHMENT";
-    })(OptionType || (OptionType = {}));
+    let unpatch;
 
-    var CommandContext;
-    (function (e) {
-        e[(e.CHAT = 1)] = "CHAT";
-        e[(e.USER = 2)] = "USER";
-        e[(e.MESSAGE = 3)] = "MESSAGE";
-    })(CommandContext || (CommandContext = {}));
+    function injectProfileButton() {
+        unpatch = v.patcher.after("render", ChatInput.default.prototype, (_, res) => {
+            if (!res || !res.props || !res.props.children) return res;
 
-    // Command Registration
-    let RegisteredCommands = [];
+            const currentUser = UserStore.getCurrentUser();
+            if (!currentUser) return res;
 
-    const RegisterCommands = function () {
-        RegisteredCommands.push(
-            $.registerCommand({
-                name: "leaveall",
-                displayName: "leaveall",
-                description: "Leave all joined servers.",
-                displayDescription: "Leave all joined servers.",
-                type: CommandContext.CHAT,
-                inputType: CommandType.BUILT_IN_TEXT,
-                applicationId: "-1",
-                options: [],
-                async execute(args) {
-                    try {
-                        const GuildStore = h.findByProps("getGuilds", "getGuild");
-                        const LeaveGuild = h.findByProps("leaveGuild");
-                        const Dispatcher = h.findByProps("dispatch");
-                        const guilds = Object.keys(GuildStore.getGuilds());
+            const avatarUrl = `https://cdn.discordapp.com/avatars/${currentUser.id}/${currentUser.avatar}.png?size=32`;
 
-                        if (guilds.length === 0) {
-                            return { content: "You are not in any servers." };
-                        }
+            // Create the avatar button
+            const AvatarButton = React.createElement(
+                "img",
+                {
+                    src: avatarUrl,
+                    style: {
+                        width: 32,
+                        height: 32,
+                        borderRadius: "50%",
+                        marginRight: 8,
+                        cursor: "pointer",
+                    },
+                    onClick: () => ProfileModule.openProfileSheet(currentUser.id),
+                }
+            );
 
-                        for (const guildId of guilds) {
-                            try {
-                                await LeaveGuild.leaveGuild(guildId);
-                                Dispatcher.dispatch({ type: "GUILD_REMOVE", guildId });
-                            } catch (err) {
-                                console.error(`Failed to leave guild ${guildId}:`, err);
-                            }
-                        }
+            // Inject the button at the start of the children array
+            res.props.children.unshift(AvatarButton);
+            return res;
+        });
+    }
 
-                        return { content: "Successfully left all servers." };
-                    } catch (error) {
-                        console.error("Error leaving servers:", error);
-                        return { content: "An error occurred while leaving servers. Check the console for details." };
-                    }
-                },
-            })
-        );
+    plugin.onLoad = function () {
+        injectProfileButton();
     };
 
-    const UnregisterCommands = function () {
-        for (const command of RegisteredCommands) command();
+    plugin.onUnload = function () {
+        if (unpatch) unpatch();
     };
 
-    // Plugin Lifecycle
-    return (f.onLoad = RegisterCommands), (f.onUnload = UnregisterCommands), f;
-})({}, vendetta.commands, vendetta.metro, vendetta.metro.common);
+})(vendetta.plugin, vendetta, vendetta.metro);
