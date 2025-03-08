@@ -9,11 +9,26 @@
     let unpatch;
 
     function injectProfileButton() {
+        console.log("[ProfileButton] Injecting into ChatInputActions...");
+        
+        if (!ChatInputActions) {
+            console.error("[ProfileButton] ChatInputActions not found!");
+            return;
+        }
+
         unpatch = v.patcher.after("default", ChatInputActions, (_, res) => {
-            if (!res || !res.props || !res.props.children) return res;
+            if (!res || !res.props || !res.props.children) {
+                console.error("[ProfileButton] ChatInputActions has no children!");
+                return res;
+            }
 
             const currentUser = UserStore.getCurrentUser();
-            if (!currentUser) return res;
+            if (!currentUser) {
+                console.error("[ProfileButton] Unable to get current user!");
+                return res;
+            }
+
+            console.log("[ProfileButton] Adding avatar button...");
 
             const avatarUrl = `https://cdn.discordapp.com/avatars/${currentUser.id}/${currentUser.avatar}.png?size=32`;
 
@@ -37,6 +52,8 @@
             res.props.children.unshift(AvatarButton);
             return res;
         });
+
+        console.log("[ProfileButton] Injection complete.");
     }
 
     plugin.onLoad = function () {
