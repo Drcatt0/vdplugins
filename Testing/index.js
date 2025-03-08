@@ -4,12 +4,12 @@
     const { React } = v.metro.common;
     const ProfileModule = m.findByProps("openProfileSheet");
     const UserStore = m.findByProps("getCurrentUser");
-    const ChatInput = m.findByProps("ChatInput");
+    const ChatButtons = m.findByProps("ChannelTextAreaButtons");
 
     let unpatch;
 
     function injectProfileButton() {
-        unpatch = v.patcher.after("render", ChatInput.default.prototype, (_, res) => {
+        unpatch = v.patcher.after("default", ChatButtons, (_, res) => {
             if (!res || !res.props || !res.props.children) return res;
 
             const currentUser = UserStore.getCurrentUser();
@@ -33,7 +33,7 @@
                 }
             );
 
-            // Inject the button at the start of the children array
+            // Inject the button at the **start** of the chat bar buttons
             res.props.children.unshift(AvatarButton);
             return res;
         });
