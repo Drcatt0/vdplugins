@@ -1,131 +1,84 @@
 (function (plugin, vendetta, metro, common) {
   "use strict";
-
+  
   const { React } = common;
-  const { TouchableOpacity, Image } = common.ReactNative;
-  const UserStore = metro.findByProps("getCurrentUser");
-  const ProfileModule = metro.findByProps("openProfileSheet");
-  let unpatches = [];
-
-  // Helper: Build the Discord avatar URL.
-  function getUserAvatarUrl(user, size = 40) {
-    if (!user || !user.avatar) return null;
-    return `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=${size}`;
-  }
-
-  // Try patching a module by its name.
-  function patchCandidate(moduleName) {
-    const mod = metro.findByName(moduleName);
-    if (!mod || !mod.type) return false;
-    const unp = vendetta.patcher.before("render", mod.type, ([props]) => {
-      if (!props || !Array.isArray(props.children)) return;
-      const user = UserStore.getCurrentUser();
-      if (!user) return;
-      const avatarUrl = getUserAvatarUrl(user, 40);
-      if (!avatarUrl) return;
-      // Create the profile button with a red border (for debugging).
-      const button = React.createElement(
-        TouchableOpacity,
+  const { View, Text } = common.ReactNative;
+  const unpatches = [];
+  
+  // We'll try patching a likely candidate component.
+  // First, try to locate "ChatInput" (often present as the text input container).
+  const ChatInput = metro.findByName("ChatInput");
+  
+  if (ChatInput && ChatInput.type) {
+    unpatches.push(vendetta.patcher.before("render", ChatInput.type, ([props]) => {
+      if (!props || !props.children || !Array.isArray(props.children)) return;
+      
+      // Create a big red box with "TEST" text for debugging.
+      const TestBox = React.createElement(
+        View,
         {
-          onPress: () => {
-            if (ProfileModule && typeof ProfileModule.openProfileSheet === "function")
-              ProfileModule.openProfileSheet(user.id);
+          style: {
+            width: 100,
+            height: 100,
+            backgroundColor: "red",
+            position: "absolute",
+            top: 0,
+            left: 0,
+            zIndex: 9999,
+            justifyContent: "center",
+            alignItems: "center"
           },
-          style: { marginRight: 8, borderWidth: 2, borderColor: "red" },
-          key: "profile-button"
+          key: "test-box"
         },
-        React.createElement(Image, {
-          source: { uri: avatarUrl },
-          style: { width: 32, height: 32, borderRadius: 16 }
-        })
+        React.createElement(Text, { style: { color: "white", fontSize: 20 } }, "TEST")
       );
-      // Only add if not already present.
-      if (!props.children.some(child => child && child.key === "profile-button")) {
-        props.children.unshift(button);
-      }
-    });
-    unpatches.push(unp);
-    return true;
-  }
-
-  // Try common candidate names for the chat input container.
-  function patchChatBar() {
-    const candidates = ["ChatInputActions", "ChannelTextAreaButtons"];
-    let patched = false;
-    for (const name of candidates) {
-      if (patchCandidate(name)) {
-        patched = true;
-      }
-    }
-    return patched;
-  }
-
-  // Fallback: Patch the AppShell to add a floating button.
-  function patchAppShell() {
+      
+      // Insert the test box at the start of the children array.
+      props.children.unshift(TestBox);
+    }));
+  } else {
+    // Fallback: patch the AppShell if ChatInput isn't found.
     const AppShell =
       metro.findByProps("AppShell") ||
       metro.findByName("AppShell") ||
       metro.findByProps("renderRouteContainer");
-    if (!AppShell) return false;
-    const unp = vendetta.patcher.after(
-      "render",
-      AppShell.default ? AppShell.default : AppShell,
-      (_, res) => {
+    if (AppShell) {
+      unpatches.push(vendetta.patcher.after("render", AppShell.default ? AppShell.default : AppShell, (_, res) => {
         if (!res || !res.props) return res;
-        const user = UserStore.getCurrentUser();
-        if (!user) return res;
-        const avatarUrl = getUserAvatarUrl(user, 40);
-        if (!avatarUrl) return res;
-        const floatButton = React.createElement(
-          TouchableOpacity,
+        const TestBox = React.createElement(
+          View,
           {
-            onPress: () => {
-              if (ProfileModule && typeof ProfileModule.openProfileSheet === "function")
-                ProfileModule.openProfileSheet(user.id);
-            },
             style: {
+              width: 100,
+              height: 100,
+              backgroundColor: "red",
               position: "absolute",
-              bottom: 80,
-              left: 10,
+              top: 0,
+              left: 0,
               zIndex: 9999,
-              width: 50,
-              height: 50,
-              borderRadius: 25,
-              backgroundColor: "#5865F2",
               justifyContent: "center",
-              alignItems: "center",
-              borderWidth: 2,
-              borderColor: "red"
+              alignItems: "center"
             },
-            key: "float-profile-button"
+            key: "test-box"
           },
-          React.createElement(Image, {
-            source: { uri: avatarUrl },
-            style: { width: 40, height: 40, borderRadius: 20 }
-          })
+          React.createElement(Text, { style: { color: "white", fontSize: 20 } }, "TEST")
         );
         if (Array.isArray(res.props.children)) {
-          res.props.children.push(floatButton);
+          res.props.children.unshift(TestBox);
         } else {
-          res.props.children = [res.props.children, floatButton];
+          res.props.children = [TestBox];
         }
         return res;
-      }
-    );
-    unpatches.push(unp);
-    return true;
+      }));
+    }
   }
-
+  
   plugin.onLoad = () => {
-    // Delay patching to allow the UI to load.
-    setTimeout(() => {
-      if (!patchChatBar()) {
-        patchAppShell();
-      }
-    }, 3000);
+    console.log("[Debug Plugin] Loaded.");
   };
-
+  
   plugin.onUnload = () => {
-    unpatches.forEach(unp => unp());
+    unpatches.forEach(u => u());
+    console.log("[Debug Plugin] Unloaded.");
   };
 })(vendetta.plugin, vendetta, vendetta.metro, vendetta.metro.common);
