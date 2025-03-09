@@ -1,101 +1,137 @@
-(function (plugin, v, m) {
+(function(plugin, vendetta, metro) {
     "use strict";
-
-    const { React } = v.metro.common;
-    const { View, ScrollView, Text, TouchableOpacity, ActivityIndicator } = v.metro.common.ReactNative;
-    const { storage } = v.plugin;
-    const { FormInput, FormLabel, FormSwitchRow } = v.ui.components.Forms;
-    const { showToast } = v.ui.toasts;
-    const { openModal } = v.ui;
-
-    // Your Plugin Repo URL
-    const PLUGIN_REPO = "https://drcatt0.github.io/vdplugins/";
-
-    // Component to Fetch and Display Plugins
-    function PluginBrowser() {
-        const [plugins, setPlugins] = React.useState(null);
-        const [loading, setLoading] = React.useState(true);
-        const [error, setError] = React.useState(null);
-
-        React.useEffect(() => {
-            fetch(PLUGIN_REPO + "index.json")
-                .then((res) => res.json())
-                .then((data) => {
-                    setPlugins(data.plugins);
-                    setLoading(false);
+    
+    const { React } = vendetta.metro.common;
+    const ProfileModule = metro.findByProps("openUserProfile", "openUserProfileModal");
+    const UserStore = metro.findByProps("getCurrentUser");
+    
+    // Find the chat input toolbar components using more reliable methods
+    const ChatBarComponent = metro.findByProps("ChatBarButton");
+    
+    let unpatch;
+    
+    function injectProfileButton() {
+        console.log("[Profile Button] Attempting to inject profile button...");
+        
+        // First try to find the component that renders the chat input buttons
+        const ChatBarButtonComponent = metro.findByName("ChatBarButton") || 
+                                      metro.findByDisplayName("ChatBarButton");
+        
+        if (!ChatBarButtonComponent) {
+            console.error("[Profile Button] ChatBarButton component not found!");
+            return;
+        }
+        
+        // Create a custom button component that mimics Discord's style
+        const ProfileButton = (props) => {
+            const currentUser = UserStore.getCurrentUser();
+            if (!currentUser || !currentUser.avatar) {
+                return null;
+            }
+            
+            const avatarUrl = `https://cdn.discordapp.com/avatars/${currentUser.id}/${currentUser.avatar}.png?size=40`;
+            
+            // Use Discord's own styling for consistency
+            return React.createElement(ChatBarButtonComponent, {
+                ...props,
+                style: {
+                    marginLeft: 8,
+                    marginRight: 4
+                },
+                onPress: () => {
+                    if (ProfileModule.openUserProfile) {
+                        ProfileModule.openUserProfile({ userId: currentUser.id });
+                    } else if (ProfileModule.openUserProfileModal) {
+                        ProfileModule.openUserProfileModal({ userId: currentUser.id });
+                    } else if (ProfileModule.openProfileSheet) {
+                        ProfileModule.openProfileSheet(currentUser.id);
+                    }
+                },
+                icon: props => React.createElement("img", {
+                    src: avatarUrl,
+                    style: {
+                        width: 24,
+                        height: 24,
+                        borderRadius: 12,
+                        objectFit: "cover"
+                    }
                 })
-                .catch((err) => {
-                    console.error("[Plugin Browser] Failed to fetch plugins:", err);
-                    setError("Failed to load plugin list.");
-                    setLoading(false);
-                });
-        }, []);
-
-        if (loading) {
-            return (
-                <View style={{ padding: 20 }}>
-                    <ActivityIndicator size="large" color="#7289DA" />
-                </View>
-            );
-        }
-
-        if (error) {
-            return (
-                <View style={{ padding: 20 }}>
-                    <Text style={{ color: "red" }}>{error}</Text>
-                </View>
-            );
-        }
-
-        return (
-            <ScrollView style={{ padding: 10 }}>
-                {plugins.map((plugin) => (
-                    <View key={plugin.name} style={{ marginBottom: 15, padding: 10, borderRadius: 8, backgroundColor: "#2F3136" }}>
-                        <Text style={{ fontSize: 18, fontWeight: "bold", color: "white" }}>{plugin.name}</Text>
-                        <Text style={{ color: "#BBB", marginBottom: 10 }}>{plugin.description}</Text>
-                        <TouchableOpacity
-                            onPress={() => installPlugin(plugin.url)}
-                            style={{
-                                backgroundColor: "#7289DA",
-                                padding: 10,
-                                borderRadius: 5,
-                                alignItems: "center",
-                            }}
-                        >
-                            <Text style={{ color: "white", fontWeight: "bold" }}>Install</Text>
-                        </TouchableOpacity>
-                    </View>
-                ))}
-            </ScrollView>
-        );
-    }
-
-    // Function to Install Plugin
-    function installPlugin(url) {
-        v.plugins.install(url)
-            .then(() => {
-                showToast(`Installed ${url}`, "success");
-            })
-            .catch((err) => {
-                showToast(`Failed to install: ${err}`, "error");
             });
-    }
-
-    // Plugin Registration
-    plugin.onLoad = function () {
-        v.commands.registerCommand({
-            name: "pluginbrowser",
-            displayName: "pluginbrowser",
-            description: "Browse and install custom plugins from drcatt0.github.io",
-            type: 1,
-            applicationId: "-1",
-            inputType: 1,
-            execute: () => openModal(PluginBrowser),
+        };
+        
+        // Find the chat input container
+        const ChatInputContainer = metro.findByProps("ChatInput");
+        
+        if (!ChatInputContainer || !ChatInputContainer.default) {
+            console.error("[Profile Button] Chat input container not found!");
+            return;
+        }
+        
+        // Patch the chat input container to add our button
+        unpatch = vendetta.patcher.after("default", ChatInputContainer, (_, res) => {
+            try {
+                if (!res || !res.props || !res.props.children) return res;
+                
+                // Find the buttons container in the chat input
+                const findButtonsContainer = (element) => {
+                    if (!element) return null;
+                    
+                    // Check if this element is the buttons container
+                    if (element.props && Array.isArray(element.props.children)) {
+                        const buttons = element.props.children.filter(child => 
+                            child && child.type && 
+                            (child.type.name === "ChatBarButton" || 
+                             child.type.displayName === "ChatBarButton")
+                        );
+                        
+                        if (buttons.length > 0) return element;
+                    }
+                    
+                    // If not, check its children
+                    if (element.props && element.props.children) {
+                        if (Array.isArray(element.props.children)) {
+                            for (const child of element.props.children) {
+                                const result = findButtonsContainer(child);
+                                if (result) return result;
+                            }
+                        } else {
+                            return findButtonsContainer(element.props.children);
+                        }
+                    }
+                    
+                    return null;
+                };
+                
+                const buttonsContainer = findButtonsContainer(res);
+                
+                if (buttonsContainer && buttonsContainer.props && Array.isArray(buttonsContainer.props.children)) {
+                    // Add our profile button to the beginning of the buttons array
+                    buttonsContainer.props.children.unshift(
+                        React.createElement(ProfileButton, { key: "profile-button" })
+                    );
+                    console.log("[Profile Button] Successfully injected button!");
+                } else {
+                    console.error("[Profile Button] Buttons container not found in chat input!");
+                }
+                
+                return res;
+            } catch (error) {
+                console.error("[Profile Button] Error during injection:", error);
+                return res;
+            }
         });
+    }
+    
+    plugin.onLoad = function() {
+        console.log("[Profile Button] Plugin loaded!");
+        
+        // Wait a short time for Discord to initialize components
+        setTimeout(injectProfileButton, 2000);
     };
-
-    plugin.onUnload = function () {
-        v.commands.unregisterCommand("pluginbrowser");
+    
+    plugin.onUnload = function() {
+        console.log("[Profile Button] Plugin unloaded!");
+        if (unpatch) unpatch();
     };
-
+    
 })(vendetta.plugin, vendetta, vendetta.metro);
