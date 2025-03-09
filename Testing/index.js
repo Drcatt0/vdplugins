@@ -4,9 +4,10 @@
   const { React } = common;
   // Lazy-load the chat input actions module by its display name.
   // (If this isn’t working on iOS, you may try other candidates such as "ChannelTextAreaButtons".)
-  const ChatInputActions = lazy.createLazyModule(() =>
-    metro.findByTypeDisplayName("ChatInputActions")
-  );
+const ChatInputActions = lazy.createLazyModule(() =>
+  metro.findByTypeDisplayName("ChannelTextAreaButtons")
+);
+
   const UserStore = metro.findByProps("getCurrentUser");
   const ProfileModule = metro.findByProps("openProfileSheet");
 
