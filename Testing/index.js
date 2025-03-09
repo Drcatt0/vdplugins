@@ -2,54 +2,38 @@
   "use strict";
 
   const { React } = metro.common;
-  const { Image, View, TouchableOpacity } = metro.common.ReactNative;
+  const { TouchableOpacity, Image } = metro.common.ReactNative;
   const UserStore = metro.findByProps("getCurrentUser");
-  // Use the built‐in profile opener, if available.
   const ProfileModule = metro.findByProps("openProfileSheet");
-
   let unpatches = [];
 
-  // Helper: Get a user's avatar URL
+  // Helper to construct the user's avatar URL
   function getUserAvatarUrl(user, size = 40) {
     if (!user || !user.avatar) return null;
     return `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=${size}`;
   }
 
-  // Helper: Open the user's profile
+  // Helper to open the profile (using the built-in profile sheet function)
   function openUserProfile(userId) {
     if (ProfileModule && typeof ProfileModule.openProfileSheet === "function") {
       ProfileModule.openProfileSheet(userId);
     }
   }
 
-  // Try multiple candidate names to find the chat input area
-  function findChatInputComponent() {
-    const candidates = [
-      "ChatInputActions",
-      "ChannelTextAreaButtons",
-      "MessageInput",
-      "ChatBar"
-    ];
-    for (const name of candidates) {
-      const comp = metro.findByName(name);
-      if (comp) return comp;
-    }
-    return null;
-  }
+  // Strategy 1: Patch the chat input container.
+  // This tries to find a module by the props "onSend" and "onChangeText" (often present in the input container).
+  function injectIntoChatInputContainer() {
+    const ChatInputContainer = metro.findByProps("onSend", "onChangeText");
+    if (!ChatInputContainer) return false;
 
-  // Strategy 1: Patch the chat input area to inject the avatar button
-  function injectIntoChatInput() {
-    const ChatInputComponent = findChatInputComponent();
-    if (!ChatInputComponent) return false;
-
-    const unp = vendetta.patcher.after("default", ChatInputComponent, (_, res) => {
+    const unp = vendetta.patcher.after("default", ChatInputContainer, (_, res) => {
       if (!res || !res.props || !Array.isArray(res.props.children)) return res;
       const currentUser = UserStore.getCurrentUser();
       if (!currentUser) return res;
       const avatarUrl = getUserAvatarUrl(currentUser);
       if (!avatarUrl) return res;
 
-      // Create the avatar button using React Native components
+      // Create an avatar button using TouchableOpacity and Image
       const AvatarButton = React.createElement(
         TouchableOpacity,
         {
@@ -58,26 +42,21 @@
         },
         React.createElement(Image, {
           source: { uri: avatarUrl },
-          style: {
-            width: 32,
-            height: 32,
-            borderRadius: 16
-          }
+          style: { width: 32, height: 32, borderRadius: 16 }
         })
       );
 
-      // Insert the avatar button at the beginning of the action buttons array
+      // Insert the button at the beginning of the children array
       res.props.children.unshift(AvatarButton);
       return res;
     });
-
     unpatches.push(unp);
     return true;
   }
 
-  // Strategy 2: If patching the chat input fails, create a floating button
+  // Strategy 2: Fallback – Create a floating button.
+  // This patches the AppShell (or similar root component) to add a button at a fixed position.
   function createFloatingButton() {
-    // Try to find a root-level component (AppShell)
     const AppShell =
       metro.findByProps("AppShell") ||
       metro.findByDisplayName("AppShell") ||
@@ -91,7 +70,7 @@
       const avatarUrl = getUserAvatarUrl(currentUser);
       if (!avatarUrl) return res;
 
-      // Create a floating button using React Native components
+      // Create a floating button
       const floatingButton = React.createElement(
         TouchableOpacity,
         {
@@ -111,15 +90,10 @@
         },
         React.createElement(Image, {
           source: { uri: avatarUrl },
-          style: {
-            width: 40,
-            height: 40,
-            borderRadius: 20
-          }
+          style: { width: 40, height: 40, borderRadius: 20 }
         })
       );
 
-      // Append the floating button to the app shell's children
       if (Array.isArray(res.props.children)) {
         res.props.children.push(floatingButton);
       } else {
@@ -127,15 +101,14 @@
       }
       return res;
     });
-
     unpatches.push(unp);
     return true;
   }
 
   plugin.onLoad = function () {
-    // Delay the injection to let the UI load (try 3 seconds)
+    // Wait a few seconds to allow UI components to load
     setTimeout(() => {
-      if (!injectIntoChatInput()) {
+      if (!injectIntoChatInputContainer()) {
         createFloatingButton();
       }
     }, 3000);
