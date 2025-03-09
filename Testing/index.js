@@ -1,9 +1,7 @@
 (function (exports, api, metro, common, plugin, lazy) {
   "use strict";
 
-  console.log("🔄 [Profile Button Plugin] Initializing...");
-
-  // Storage system
+  // Initialize storage and settings
   var storage = new (function StorageManager(options) {
     this._storage = options.storage;
     this.version = options.version;
@@ -19,13 +17,13 @@
     storage: plugin.storage,
     initialize: function () {
       return {
-        version: 5,
+        version: 4,
         hide: { app: true, gift: true, thread: true, voice: true },
-        show: { thread: false, profile: true }, // Profile Button Toggle
+        show: { thread: false, profile: true }, // Profile button setting added
         neverDismiss: true,
       };
     },
-    version: 5,
+    version: 4,
     migrations: {
       1: function (oldStorage) {
         return oldStorage;
@@ -38,67 +36,63 @@
 
   var unpatches = [];
 
-  // Debugging
-  function log(message) {
-    console.log(`🛠️ [Profile Button Plugin] ${message}`);
-  }
-
-  // Load necessary Discord modules
+  // Find relevant modules
   var ChatInputActions = metro.findByName("ChatInputActions") || metro.findByProps("renderSendButton");
   var UserStore = metro.findByProps("getCurrentUser");
   var ProfileModule = metro.findByProps("openProfileSheet");
 
-  if (!ChatInputActions) log("⚠️ Could not find ChatInputActions!");
-  if (!UserStore) log("⚠️ Could not find UserStore!");
-  if (!ProfileModule) log("⚠️ Could not find ProfileModule!");
+  // Debugging logs
+  function log(message) {
+    console.log(`🛠️ [Profile Button Plugin] ${message}`);
+  }
 
-  // Helper: Get the user's avatar URL
+  // Helper: Get user's avatar URL
   function getUserAvatarUrl(user, size = 40) {
     if (!user || !user.avatar) return null;
     return `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=${size}`;
   }
 
-  // Inject the Profile Button
+  // Inject the Profile Button into Chat Bar
   function patchProfileButton() {
-    try {
-      if (!ChatInputActions || !ChatInputActions.type) return;
-      log("📌 Patching ChatInputActions...");
-
-      let unp = api.patcher.before("render", ChatInputActions.type, ([props]) => {
-        if (!props || !Array.isArray(props.children)) return;
-        if (!storage.get("show.profile")) return; // Only inject if enabled
-
-        const currentUser = UserStore.getCurrentUser();
-        if (!currentUser || !currentUser.avatar) return;
-        const avatarUrl = getUserAvatarUrl(currentUser, 40);
-
-        const ProfileButton = common.React.createElement(
-          common.TouchableOpacity,
-          {
-            onPress: () => {
-              if (ProfileModule?.openProfileSheet)
-                ProfileModule.openProfileSheet(currentUser.id);
-            },
-            style: { marginRight: 8 },
-            key: "profile-button"
-          },
-          common.React.createElement(common.Image, {
-            source: { uri: avatarUrl },
-            style: { width: 32, height: 32, borderRadius: 16 }
-          })
-        );
-
-        // Ensure the button isn't added multiple times
-        if (!props.children.some(child => child?.key === "profile-button")) {
-          props.children.unshift(ProfileButton);
-          log("✅ Profile Button added to Chat Bar!");
-        }
-      });
-
-      unpatches.push(unp);
-    } catch (err) {
-      console.error("❌ [Profile Button Plugin] Failed to patch ChatInputActions:", err);
+    if (!ChatInputActions || !ChatInputActions.type) {
+      log("⚠️ Could not find ChatInputActions!");
+      return;
     }
+
+    log("📌 Patching ChatInputActions...");
+    let unp = api.patcher.before("render", ChatInputActions.type, ([props]) => {
+      if (!props || !Array.isArray(props.children)) return;
+      if (!storage.get("show.profile")) return; // Only inject if enabled
+
+      const currentUser = UserStore.getCurrentUser();
+      if (!currentUser || !currentUser.avatar) return;
+      const avatarUrl = getUserAvatarUrl(currentUser, 40);
+
+      // Create the profile button
+      const ProfileButton = common.React.createElement(
+        common.TouchableOpacity,
+        {
+          onPress: () => {
+            if (ProfileModule?.openProfileSheet)
+              ProfileModule.openProfileSheet(currentUser.id);
+          },
+          style: { marginRight: 8 },
+          key: "profile-button"
+        },
+        common.React.createElement(common.Image, {
+          source: { uri: avatarUrl },
+          style: { width: 32, height: 32, borderRadius: 16 }
+        })
+      );
+
+      // Ensure the button isn’t added multiple times
+      if (!props.children.some(child => child?.key === "profile-button")) {
+        props.children.unshift(ProfileButton);
+        log("✅ Profile Button added to Chat Bar!");
+      }
+    });
+
+    unpatches.push(unp);
   }
 
   // Inject profile button when plugin loads
@@ -106,13 +100,12 @@
     patchProfileButton();
   }
 
-  // Plugin lifecycle
   var index = {
     onLoad: function () {
       log("🚀 Plugin loaded!");
       setTimeout(() => {
         injectPatches();
-      }, 3000);
+      }, 2000);
     },
     onUnload: function () {
       unpatches.forEach(unp => unp());
