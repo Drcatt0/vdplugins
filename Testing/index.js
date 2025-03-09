@@ -1,7 +1,9 @@
 (function (exports, api, metro, common, plugin, lazy) {
   "use strict";
 
-  // Initialize storage with "show.profile" option.
+  console.log("🔄 [Profile Button Plugin] Initializing...");
+
+  // Storage system
   var storage = new (function StorageManager(options) {
     this._storage = options.storage;
     this.version = options.version;
@@ -11,20 +13,19 @@
       var newStorage = options.initialize();
       for (var key in newStorage) this._storage[key] = newStorage[key];
     }
-    if (this.version < this._storage.version)
-      throw new Error("Unsupported storage version");
+    if (this.version < this._storage.version) throw new Error("Unsupported storage version");
     if (this.version > this._storage.version) this.migrate();
   })({
     storage: plugin.storage,
     initialize: function () {
       return {
-        version: 4,
+        version: 5,
         hide: { app: true, gift: true, thread: true, voice: true },
-        show: { thread: false, profile: true }, // New: Profile button toggle
+        show: { thread: false, profile: true }, // Profile Button Toggle
         neverDismiss: true,
       };
     },
-    version: 4,
+    version: 5,
     migrations: {
       1: function (oldStorage) {
         return oldStorage;
@@ -37,22 +38,21 @@
 
   var unpatches = [];
 
-  // Lazy load utilities
-  var { factories: { createFilterDefinition }, lazy: { createLazyModule } } = metro;
-  var byTypeDisplayName = createFilterDefinition(
-    ([name], m) => m?.type?.displayName === name,
-    ([name]) => `palmdevs.byTypeDisplayName(${name})`
-  );
-  var findByTypeDisplayNameLazy = (displayName, expDefault = true) =>
-    createLazyModule(expDefault ? byTypeDisplayName(displayName) : byTypeDisplayName.byRaw(displayName));
+  // Debugging
+  function log(message) {
+    console.log(`🛠️ [Profile Button Plugin] ${message}`);
+  }
 
-  // Get necessary modules
-  var ChatInputActions = findByTypeDisplayNameLazy("ChatInputActions");
-  var ChatInputSendButton = findByTypeDisplayNameLazy("ChatInputSendButton");
+  // Load necessary Discord modules
+  var ChatInputActions = metro.findByName("ChatInputActions") || metro.findByProps("renderSendButton");
   var UserStore = metro.findByProps("getCurrentUser");
   var ProfileModule = metro.findByProps("openProfileSheet");
 
-  // Helper: Generate avatar URL
+  if (!ChatInputActions) log("⚠️ Could not find ChatInputActions!");
+  if (!UserStore) log("⚠️ Could not find UserStore!");
+  if (!ProfileModule) log("⚠️ Could not find ProfileModule!");
+
+  // Helper: Get the user's avatar URL
   function getUserAvatarUrl(user, size = 40) {
     if (!user || !user.avatar) return null;
     return `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=${size}`;
@@ -60,37 +60,45 @@
 
   // Inject the Profile Button
   function patchProfileButton() {
-    if (!ChatInputActions || !ChatInputActions.type) return;
-    let unp = api.patcher.before("render", ChatInputActions.type, ([props]) => {
-      if (!props || !Array.isArray(props.children)) return;
-      if (!storage.get("show.profile")) return; // Only inject if enabled
+    try {
+      if (!ChatInputActions || !ChatInputActions.type) return;
+      log("📌 Patching ChatInputActions...");
 
-      const currentUser = UserStore.getCurrentUser();
-      if (!currentUser || !currentUser.avatar) return;
-      const avatarUrl = getUserAvatarUrl(currentUser, 40);
+      let unp = api.patcher.before("render", ChatInputActions.type, ([props]) => {
+        if (!props || !Array.isArray(props.children)) return;
+        if (!storage.get("show.profile")) return; // Only inject if enabled
 
-      const ProfileButton = common.React.createElement(
-        common.TouchableOpacity,
-        {
-          onPress: () => {
-            if (ProfileModule?.openProfileSheet)
-              ProfileModule.openProfileSheet(currentUser.id);
+        const currentUser = UserStore.getCurrentUser();
+        if (!currentUser || !currentUser.avatar) return;
+        const avatarUrl = getUserAvatarUrl(currentUser, 40);
+
+        const ProfileButton = common.React.createElement(
+          common.TouchableOpacity,
+          {
+            onPress: () => {
+              if (ProfileModule?.openProfileSheet)
+                ProfileModule.openProfileSheet(currentUser.id);
+            },
+            style: { marginRight: 8 },
+            key: "profile-button"
           },
-          style: { marginRight: 8 },
-          key: "profile-button"
-        },
-        common.React.createElement(common.Image, {
-          source: { uri: avatarUrl },
-          style: { width: 32, height: 32, borderRadius: 16 }
-        })
-      );
+          common.React.createElement(common.Image, {
+            source: { uri: avatarUrl },
+            style: { width: 32, height: 32, borderRadius: 16 }
+          })
+        );
 
-      if (!props.children.some(child => child?.key === "profile-button")) {
-        props.children.unshift(ProfileButton);
-      }
-    });
+        // Ensure the button isn't added multiple times
+        if (!props.children.some(child => child?.key === "profile-button")) {
+          props.children.unshift(ProfileButton);
+          log("✅ Profile Button added to Chat Bar!");
+        }
+      });
 
-    unpatches.push(unp);
+      unpatches.push(unp);
+    } catch (err) {
+      console.error("❌ [Profile Button Plugin] Failed to patch ChatInputActions:", err);
+    }
   }
 
   // Inject profile button when plugin loads
@@ -101,14 +109,14 @@
   // Plugin lifecycle
   var index = {
     onLoad: function () {
+      log("🚀 Plugin loaded!");
       setTimeout(() => {
         injectPatches();
       }, 3000);
-      console.log("Profile Button Plugin loaded");
     },
     onUnload: function () {
       unpatches.forEach(unp => unp());
-      console.log("Profile Button Plugin unloaded");
+      log("🔄 Plugin unloaded!");
     },
     settings: function () {
       var [_state, forceUpdate] = common.React.useReducer((x) => ~x, 0);
@@ -118,7 +126,7 @@
         common.React.createElement(
           common.TableRowGroup,
           { title: "Show Buttons" },
-          // Add a new row for the profile button toggle
+          // Profile button toggle
           common.React.createElement(common.TableSwitchRow, {
             icon: common.React.createElement(common.TableRow.Icon, {
               source: api.assets.findAssetId("ic_profile"),
@@ -128,6 +136,7 @@
             onValueChange: (v) => {
               storage.set("show.profile", v);
               forceUpdate();
+              log(`🔧 Profile Button toggled: ${v}`);
             },
           })
         ),
