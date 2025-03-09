@@ -1,7 +1,7 @@
 (function (exports, api, metro, common, plugin, lazy) {
   "use strict";
-  
-  // ––– Storage Manager (as provided) –––
+
+  // ––– Storage Manager (from your provided code) –––
   function _class_call_check(instance, Constructor) {
     if (!(instance instanceof Constructor))
       throw new TypeError("Cannot call a class as a function");
@@ -126,46 +126,36 @@
     ]);
     return StorageManager2;
   }();
-  
-  // ––– Create storage with an added option for the profile button.
+
+  // Initialize storage with our options.
   var storage = new StorageManager({
     storage: plugin.storage,
     initialize: function () {
       return {
         version: 3,
-        hide: {
-          app: true,
-          gift: true,
-          thread: true,
-          voice: true,
-          profile: false, // false = do not hide (i.e. show the profile button) by default.
-        },
-        show: { thread: false },
+        // Use "show.profile": true to indicate that the profile button should be injected.
+        show: { profile: true, thread: false },
+        hide: { app: true, gift: true, thread: true, voice: true },
         neverDismiss: true,
       };
     },
     version: 3,
     migrations: {
-      1: function (_a) {
-        var version = _a.version,
-          oldStorage = _a;
-        return _define_property({}, "hide", oldStorage), _define_property({}, "neverDismiss", true);
+      1: function (oldStorage) {
+        // Migration code here if needed.
+        return oldStorage;
       },
       2: function (old) {
-        return _define_property({}, "show", { thread: false }), old;
+        return old;
       },
     },
   });
-  
+
   var unpatches = [];
-  
+
   // Lazy helpers from BunnyPlugins:
   var _a,
-    color = metro.findByPropsLazy("SemanticColor");
-  color === null || color === void 0 ? void 0 : color.default;
-  (_a = color.default) === null || _a === void 0 ? void 0 : (_a.meta = color.default.internal);
-  metro.findByStoreNameLazy("ThemeStore");
-  var { factories: { createFilterDefinition }, lazy: { createLazyModule } } = metro;
+    { factories: { createFilterDefinition }, lazy: { createLazyModule } } = metro;
   var byTypeDisplayName = createFilterDefinition(
     function ([name], m) {
       return m && m.type && m.type.displayName === name;
@@ -178,20 +168,18 @@
     if (expDefault === void 0) expDefault = true;
     return createLazyModule(expDefault ? byTypeDisplayName(displayName) : byTypeDisplayName.byRaw(displayName));
   };
-  
-  // ––– Retrieve candidate components.
-  var ChatInputSendButton = findByTypeDisplayNameLazy("ChatInputSendButton");
+
+  // Retrieve candidate components.
   var ChatInputActions = findByTypeDisplayNameLazy("ChatInputActions");
-  
-  // Patch the ChatInputSendButton (as in your original code).
+  var ChatInputSendButton = findByTypeDisplayNameLazy("ChatInputSendButton");
+
+  // (Keep existing patches from your plugin for other buttons.)
   unpatches.push(
     api.patcher.before("render", ChatInputSendButton.type, function ([props]) {
       if (props.canSendVoiceMessage)
         props.canSendVoiceMessage = !storage.get("hide.voice");
     })
   );
-  
-  // Patch the ChatInputActions to adjust various properties and inject the profile button.
   unpatches.push(
     api.patcher.before("render", ChatInputActions.type, function ([props]) {
       if (props.isAppLauncherEnabled)
@@ -199,12 +187,17 @@
       props.canStartThreads = storage.get("show.thread") || !storage.get("hide.thread");
       props.forceShowActions = storage.get("neverDismiss");
       props.shouldShowGiftButton = !storage.get("hide.gift");
-      
-      // Inject our profile button if the "Hide Profile button" option is false.
-      if (props.children && Array.isArray(props.children) && !storage.get("hide.profile")) {
+
+      // Inject the profile button only if the option is enabled.
+      if (props.children && Array.isArray(props.children) && storage.get("show.profile")) {
         var currentUser = metro.findByProps("getCurrentUser").getCurrentUser();
         if (currentUser && currentUser.avatar) {
-          var avatarUrl = "https://cdn.discordapp.com/avatars/" + currentUser.id + "/" + currentUser.avatar + ".png?size=40";
+          var avatarUrl =
+            "https://cdn.discordapp.com/avatars/" +
+            currentUser.id +
+            "/" +
+            currentUser.avatar +
+            ".png?size=40";
           var profileButton = common.React.createElement(
             common.TouchableOpacity,
             {
@@ -221,21 +214,21 @@
               style: { width: 32, height: 32, borderRadius: 16 }
             })
           );
-          // Inject the profile button if it's not already present.
+          // Only add if it hasn't been added yet.
           if (!props.children.some(function (child) {
-            return child && child.key === "profile-button";
-          }))
+              return child && child.key === "profile-button";
+            }))
             props.children.unshift(profileButton);
         }
       }
     })
   );
-  
-  // ––– Plugin lifecycle and settings UI.
+
+  // Settings UI using your existing style.
   var Stack = findByTypeDisplayNameLazy("Stack");
   var index = {
     onLoad: function () {
-      // No additional code needed here; patching is done above.
+      // Patches are already applied above.
     },
     onUnload: function () {
       unpatches.forEach(function (unpatch) {
@@ -255,42 +248,27 @@
           Stack,
           { style: { paddingVertical: 24, paddingHorizontal: 12 }, spacing: 24 },
           common.React.createElement(
-            // Hide Buttons group – now with an extra row for the profile button.
             common.TableRowGroup,
-            { title: "Hide Buttons" },
-            [
-              ["App Launcher button", "AppsIcon", "app"],
-              ["Gift button", "ic_gift", "gift"],
-              ["New Thread button", "ThreadPlusIcon", "thread"],
-              ["Voice Message button", "MicrophoneIcon", "voice"],
-              ["Profile button", "ic_profile", "profile"]
-            ].map(function (entry) {
-              var label = entry[0],
-                icon = entry[1],
-                key = entry[2];
-              return common.React.createElement(common.TableSwitchRow, {
-                key: key,
-                icon: common.React.createElement(common.TableRow.Icon, { source: api.assets.findAssetId(icon) }),
-                label: "Hide " + label,
-                disabled: key === "thread" && storage.get("show." + key),
-                value: key === "thread" && storage.get("show." + key)
-                  ? false
-                  : storage.get("hide." + key),
-                onValueChange: function (v) {
-                  storage.set("hide." + key, v);
-                  forceUpdate();
-                },
-              });
+            { title: "Show Buttons" },
+            // Add a new row for the profile button toggle.
+            common.React.createElement(common.TableSwitchRow, {
+              icon: common.React.createElement(common.TableRow.Icon, { source: api.assets.findAssetId("ic_profile") }),
+              label: "Show Profile Button",
+              value: storage.get("show.profile"),
+              onValueChange: function (v) {
+                storage.set("show.profile", v);
+                forceUpdate();
+              },
             })
           ),
           common.React.createElement(
-            // Force Show Buttons group.
             common.TableRowGroup,
             { title: "Force Show Buttons" },
             common.React.createElement(common.TableSwitchRow, {
               icon: common.React.createElement(common.TableRow.Icon, { source: api.assets.findAssetId("ThreadPlusIcon") }),
               label: "Force show New Thread button",
-              subLabel: "Show the thread button even when you can't start threads, or when the chat input is not focused",
+              subLabel:
+                "Show the thread button even when you can't start threads, or when the chat input is not focused",
               value: storage.get("show.thread"),
               onValueChange: function (v) {
                 storage.set("show.thread", v);
@@ -302,6 +280,7 @@
       );
     },
   };
+
   exports.default = index;
   exports.storage = storage;
   Object.defineProperty(exports, "__esModule", { value: true });
