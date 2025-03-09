@@ -2,8 +2,9 @@
   "use strict";
 
   const { React } = metro.common;
+  const { Image, View, TouchableOpacity } = metro.common.ReactNative;
   const UserStore = metro.findByProps("getCurrentUser");
-  // Use the standard profile opener if available.
+  // Use the built‐in profile opener, if available.
   const ProfileModule = metro.findByProps("openProfileSheet");
 
   let unpatches = [];
@@ -14,49 +15,69 @@
     return `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=${size}`;
   }
 
-  // Helper: Open the user profile (using ProfileModule)
+  // Helper: Open the user's profile
   function openUserProfile(userId) {
     if (ProfileModule && typeof ProfileModule.openProfileSheet === "function") {
       ProfileModule.openProfileSheet(userId);
     }
   }
 
-  // Strategy 1: Inject the avatar button into ChatInputActions
-  function injectIntoChatInputActions() {
-    const ChatInputActions = metro.findByName("ChatInputActions");
-    if (!ChatInputActions) return false;
+  // Try multiple candidate names to find the chat input area
+  function findChatInputComponent() {
+    const candidates = [
+      "ChatInputActions",
+      "ChannelTextAreaButtons",
+      "MessageInput",
+      "ChatBar"
+    ];
+    for (const name of candidates) {
+      const comp = metro.findByName(name);
+      if (comp) return comp;
+    }
+    return null;
+  }
 
-    const unp = vendetta.patcher.after("default", ChatInputActions, (_, res) => {
+  // Strategy 1: Patch the chat input area to inject the avatar button
+  function injectIntoChatInput() {
+    const ChatInputComponent = findChatInputComponent();
+    if (!ChatInputComponent) return false;
+
+    const unp = vendetta.patcher.after("default", ChatInputComponent, (_, res) => {
       if (!res || !res.props || !Array.isArray(res.props.children)) return res;
-
       const currentUser = UserStore.getCurrentUser();
       if (!currentUser) return res;
       const avatarUrl = getUserAvatarUrl(currentUser);
       if (!avatarUrl) return res;
 
-      // Create the avatar button element
-      const AvatarButton = React.createElement("img", {
-        src: avatarUrl,
-        style: {
-          width: 32,
-          height: 32,
-          borderRadius: 16,
-          marginRight: 8,
-          cursor: "pointer",
+      // Create the avatar button using React Native components
+      const AvatarButton = React.createElement(
+        TouchableOpacity,
+        {
+          onPress: () => openUserProfile(currentUser.id),
+          style: { marginRight: 8 }
         },
-        onClick: () => openUserProfile(currentUser.id),
-      });
+        React.createElement(Image, {
+          source: { uri: avatarUrl },
+          style: {
+            width: 32,
+            height: 32,
+            borderRadius: 16
+          }
+        })
+      );
 
-      // Insert the avatar button at the beginning of the children array
+      // Insert the avatar button at the beginning of the action buttons array
       res.props.children.unshift(AvatarButton);
       return res;
     });
+
     unpatches.push(unp);
     return true;
   }
 
-  // Strategy 2: Create a floating button on the app shell
+  // Strategy 2: If patching the chat input fails, create a floating button
   function createFloatingButton() {
+    // Try to find a root-level component (AppShell)
     const AppShell =
       metro.findByProps("AppShell") ||
       metro.findByDisplayName("AppShell") ||
@@ -65,16 +86,16 @@
 
     const unp = vendetta.patcher.after("default", AppShell, (_, res) => {
       if (!res || !res.props) return res;
-
       const currentUser = UserStore.getCurrentUser();
       if (!currentUser) return res;
       const avatarUrl = getUserAvatarUrl(currentUser);
       if (!avatarUrl) return res;
 
-      // Create a floating button element
+      // Create a floating button using React Native components
       const floatingButton = React.createElement(
-        "div",
+        TouchableOpacity,
         {
+          onPress: () => openUserProfile(currentUser.id),
           style: {
             position: "absolute",
             bottom: 80,
@@ -84,25 +105,21 @@
             height: 50,
             borderRadius: 25,
             backgroundColor: "#5865F2",
-            display: "flex",
             justifyContent: "center",
-            alignItems: "center",
-            boxShadow: "0 2px 10px rgba(0, 0, 0, 0.2)",
-          },
-          onClick: () => openUserProfile(currentUser.id),
+            alignItems: "center"
+          }
         },
-        React.createElement("img", {
-          src: avatarUrl,
+        React.createElement(Image, {
+          source: { uri: avatarUrl },
           style: {
             width: 40,
             height: 40,
-            borderRadius: 20,
-            objectFit: "cover",
-          },
+            borderRadius: 20
+          }
         })
       );
 
-      // Append the floating button to the children
+      // Append the floating button to the app shell's children
       if (Array.isArray(res.props.children)) {
         res.props.children.push(floatingButton);
       } else {
@@ -110,16 +127,15 @@
       }
       return res;
     });
+
     unpatches.push(unp);
     return true;
   }
 
   plugin.onLoad = function () {
-    // Delay to let components load
+    // Delay the injection to let the UI load (try 3 seconds)
     setTimeout(() => {
-      // Try to inject into the chat bar first
-      if (!injectIntoChatInputActions()) {
-        // Otherwise, create a floating button
+      if (!injectIntoChatInput()) {
         createFloatingButton();
       }
     }, 3000);
